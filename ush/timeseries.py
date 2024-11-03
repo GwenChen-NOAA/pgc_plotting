@@ -153,11 +153,17 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
 
     # Aggregate unit statistics and calculate metrics
     df_groups = df.groupby(group_by)
+    metrics_using_var_units = [
+        'BCRMSE','RMSE','BIAS','ME','FBAR','OBAR','MAE','FBAR_OBAR',
+        'SPEED_ERR','DIR_ERR','RMSVE','VDIFF_SPEED','VDIF_DIR',
+        'FBAR_OBAR_SPEED','FBAR_OBAR_DIR','FBAR_SPEED','FBAR_DIR'
+    ]
     df_aggregated, metric_long_names, units, unit_convert = plot_util.process_stats(
-        logger, df, model_list, metric1_name, metric2_name, 
-        metrics_using_var_units, confidence_intervals, date_type, 'timeseries',
-        bs_method, bs_nrep, bs_min_samp, ci_lev, reference, 
-        keep_shared_events_only=keep_shared_events_only
+        logger, df, df_groups, model_list, metric1_name, metric2_name, 
+        metrics_using_var_units, confidence_intervals, date_type, line_type,
+        'timeseries', bs_method, bs_nrep, bs_min_samp, ci_lev, reference, 
+        sample_equalization=sample_equalization,
+        keep_shared_events_only=keep_shared_events_only,
 
     )
     

@@ -21,8 +21,9 @@ warnings.filterwarnings('ignore')
 """
 
 
-def aggregate_stats(df_groups, model_list, date_type, plot_type, 
-                    keep_shared_events_only=True, delete_intermed_data=False):
+def aggregate_stats(df_groups, model_list, date_type, line_type, plot_type, 
+                    sample_equalization=True, keep_shared_events_only=True, 
+                    delete_intermed_data=False):
     if str(line_type).upper() == 'CTC':
         df_aggregated = df_groups.sum()
     else:
@@ -1979,12 +1980,12 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
     if plot_type == 'timeseries':
         if aggregate_dates_by:
             if aggregate_dates_by in ['m','month']:
-                df_aggregated['MONTH'] = df[
+                df_aggregated['MONTH'] = df_aggregated[
                     str(date_type).upper()
                 ].dt.strftime('%Y%m')
                 index_colname = 'MONTH'
             elif aggregate_dates_by in ['Y','year']:
-                df_aggregated['YEAR'] = df[
+                df_aggregated['YEAR'] = df_aggregated[
                     str(date_type).upper()
                 ].dt.strftime('%Y')
                 index_colname = 'YEAR'
@@ -2440,13 +2441,14 @@ def process_models(logger, df, model_list):
             )
     return df, model_list
 
-def process_stats(logger, df, model_list, metric1_name, metric2_name, 
+def process_stats(logger, df, df_groups, model_list, metric1_name, metric2_name, 
                   metrics_using_var_units, confidence_intervals, date_type,
-                  plot_type, bs_method, bs_nrep, bs_min_samp, ci_lev,
-                  reference, keep_shared_events_only=True, 
+                  line_type, plot_type, bs_method, bs_nrep, bs_min_samp, ci_lev,
+                  reference, sample_equalization=True, keep_shared_events_only=True, 
                   delete_intermed_data=False):
     df_aggregated = aggregate_stats(
-        df_groups, model_list, date_type, plot_type, 
+        df_groups, model_list, date_type, line_type, plot_type, 
+        sample_equalization=sample_equalization,
         keep_shared_events_only=keep_shared_events_only,
         delete_intermed_data=delete_intermed_data
     )
