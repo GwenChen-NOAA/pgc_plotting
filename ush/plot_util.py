@@ -1980,14 +1980,18 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
     if plot_type == 'timeseries':
         if aggregate_dates_by:
             if aggregate_dates_by in ['m','month']:
-                df_aggregated['MONTH'] = df_aggregated[
-                    str(date_type).upper()
-                ].dt.strftime('%Y%m')
+                df_aggregated = df_aggregated.assign(
+                    MONTH=pd.to_datetime(df_aggregated.index.get_level_values(
+                        str(date_type).upper()
+                    )).strftime('%Y%m')
+                ).set_index('MONTH', append=True)
                 index_colname = 'MONTH'
             elif aggregate_dates_by in ['Y','year']:
-                df_aggregated['YEAR'] = df_aggregated[
-                    str(date_type).upper()
-                ].dt.strftime('%Y')
+                df_aggregated = df_aggregated.assign(
+                    YEAR=pd.to_datetime(df_aggregated.index.get_level_values(
+                        str(date_type).upper()
+                    )).dt.strftime('%Y')
+                ).set_index('YEAR', append=True)
                 index_colname = 'YEAR'
             else:
                 raise ValueError(
