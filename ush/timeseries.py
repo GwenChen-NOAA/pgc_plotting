@@ -178,7 +178,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[4:]
 
     # Reindex pivot table with full list of dates, introducing NaNs 
-    pivot_tables, incr = reindex_pivot_tables(
+    pivot_tables, incr = plot_util.reindex_pivot_tables(
         pivot_metric2, pivot_metric2, pivot_counts, pivot_ci_lower1, 
         pivot_ci_upper2, pivot_ci_lower2, pivot_ci_upper2, 'timeseries', 
         date_hours, metric2_name, sample_equalization, confidence_intervals
