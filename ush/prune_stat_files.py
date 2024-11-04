@@ -80,7 +80,6 @@ def prune_data(data_dir, prune_dir, tmp_dir, output_base_template, valid_range,
          use_data_dir = data_dir
          use_file_template = output_base_template
       met_stat_files = []
-      print(use_data_dir, use_file_template, RUN_case, RUN_type, line_type, vx_mask, var_name, plot_util.get_model_stats_key(model_colors.model_alias, model), eval_period)
       for valid in daterange(valid_range[0], valid_range[1], td(days=1)):
          met_stat_files = expand_met_stat_files(
             met_stat_files, use_data_dir, use_file_template, RUN_case, RUN_type, 
@@ -88,7 +87,6 @@ def prune_data(data_dir, prune_dir, tmp_dir, output_base_template, valid_range,
             #plot_util.get_model_stats_key(model_colors.model_alias, model), 
             eval_period, valid
          )
-      print(len(met_stat_files))
       pruned_data_dir = os.path.join(
          prune_dir, line_type+'_'+var_name+'_'+vx_mask+'_'+eval_period, tmp_dir
       )
@@ -120,8 +118,6 @@ def prune_data(data_dir, prune_dir, tmp_dir, output_base_template, valid_range,
             +'" | grep " '+line_type
             +' " | grep " '+os.environ['INTERP']+' "'
          )
-      print(met_stat_files[:3])
-      print(filter_cmd)
       # Prune the MET .stat files and write to new file
       for met_stat_file in met_stat_files:
          ps = subprocess.Popen('grep -R "'
