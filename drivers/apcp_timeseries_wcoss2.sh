@@ -28,6 +28,9 @@ else
    echo "Unknown machine: ${machine}"
    exit 1
 fi
-${HOMEpgc_plotting}/parm/apcp_timeseries_wcoss2.config
+field="${field:-apcp06}"
+metric="${metric:-bss_1mm}"
+plottype="${plottype:-timeseries}"
+${HOMEpgc_plotting}/parm/${field}_${metric}_${plottype}.config
 
 set +x

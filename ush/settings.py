@@ -40,8 +40,8 @@ class Toggle():
             'zoom_logo_left': .65, 
             'zoom_logo_right': .65,
             'delete_intermed_data': True, # whether of not to delete DataFrame rows if, for any model, rows include NaN (currently only used in lead_average.py)
-            'aggregate_dates_by': 'month', # timeseries only; aggregate stats by 'month', 'year', or not at all ('')
-            'running_mean': '13', # timeseries only; display a running mean across the given number of time steps
+            'aggregate_dates_by': 'year', # timeseries only; aggregate stats by 'month', 'year', or not at all ('')
+            'running_mean': '', # timeseries only; display a running mean across the given number of time steps
             'color_by': 'lead', # timeseries only; set to 'model' or 'lead' to use that column to determine which and how many different-colored lines to plot
         }
 
