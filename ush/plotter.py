@@ -12,6 +12,8 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, PathPatch
 from matplotlib.path import Path
 import numpy as np
+import pandas as pd
+import math
 
 class Plotter():
     def __init__(self, font_weight='bold',  axis_title_weight='bold',  
@@ -61,6 +63,9 @@ class Plotter():
         self.lines_line_width = lines_line_width
         self.title_loc = title_loc
         self.title_color = title_color
+        self.f = lambda m,c,ls,lw,ms,mec: plt.plot(
+            [], [], marker=m, mec=mec, mew=2., c=c, ls=ls, lw=lw, ms=ms
+        )[0]
 
     def set_up_plots(self):
         plt.rcParams['axes.formatter.useoffset'] = self.axis_offset
@@ -180,6 +185,458 @@ class Plotter():
                 x_loc = x_figsize * dpi * 0.948
                 y_loc = y_figsize * dpi * 0.95
         return x_loc, y_loc, alpha
+    
+    def plot_by_lead(self, fig, pivot_metric1, pivot_metric2, pivot_counts,
+                      pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, 
+                      pivot_ci_upper2, y_min, y_max, y_min_limit, y_max_limit, 
+                      x_vals1, x_vals2, metric1_name, metric2_name, flead, 
+                      model_list, model_colors, setting_dicts, 
+                      confidence_intervals=False, y_lim_lock=True,
+                      display_averages=False, running_mean=''):
+        if metric2_name is not None:
+            handles = [
+                self.f('', 'black', line_setting, 5., 0, 'white')
+                for line_setting in ['solid','dashed']
+            ]
+            labels = [
+                str(metric_name).upper()
+                for metric_name in [metric1_name, metric2_name]
+            ]
+        else:
+            handles = []
+            labels = []
+        n_mods = 0
+        for l in range(len(flead)):
+            flead_plot_name = flead[l]
+            if flead[l] not in pivot_metric1:
+                continue
+            if not model_list:
+                model_plot_name = ""
+            elif len(model_list) == 1:
+                if model_list[0] in model_colors.model_alias:
+                    model_plot_name = model_colors.model_alias[
+                        model_list[0]
+                    ]['plot_name']
+                else:
+                    model_plot_name = model_list[0]
+            else:
+                model_plot_name = ""
+                for m in range(len(model_list[:-1])):
+                    if model_list[m] in model_colors.model_alias:
+                        model_plot_name+=(
+                            ', '+model_colors.model_alias[
+                                model_list[m]
+                            ]['plot_name']
+                        )
+                    else:
+                        model_plot_name+=(
+                            ', '+model_list[m]
+                        )
+                if model_list[-1] in model_colors.model_alias:
+                    model_plot_name+=(
+                        ', and '+model_colors.model_alias[
+                            model_list[-1]
+                        ]['plot_name']
+                    )
+                else:
+                    model_plot_name+=(
+                        ', and '+model_list[-1]
+                    )
+            y_vals_metric1 = pivot_metric1[flead[l]].values
+            y_vals_metric1_mean = np.nanmean(y_vals_metric1)
+            if metric2_name is not None:
+                y_vals_metric2 = pivot_metric2[flead[l]].values
+                y_vals_metric2_mean = np.nanmean(y_vals_metric2)
+            if confidence_intervals:
+                y_vals_ci_lower1 = pivot_ci_lower1[
+                    flead[l]
+                ].values
+                y_vals_ci_upper1 = pivot_ci_upper1[
+                    flead[l]
+                ].values
+                if metric2_name is not None:
+                    y_vals_ci_lower2 = pivot_ci_lower2[
+                        flead[l]
+                    ].values
+                    y_vals_ci_upper2 = pivot_ci_upper2[
+                        flead[l]
+                    ].values
+            if not y_lim_lock:
+                if metric2_name is not None:
+                    y_vals_both_metrics = np.concatenate((y_vals_metric1, y_vals_metric2))
+                    if np.any(y_vals_both_metrics != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics)
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics)
+                else:
+                    if np.any(y_vals_metric1 != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_metric1[y_vals_metric1 != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_metric1[y_vals_metric1 != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_metric1)
+                        y_vals_metric_max = np.nanmax(y_vals_metric1)
+                if n_mods == 0:
+                    y_mod_min = y_vals_metric_min
+                    y_mod_max = y_vals_metric_max
+                    counts = pivot_counts[flead[l]].values
+                    n_mods+=1
+                else:
+                    if math.isinf(y_mod_min):
+                        y_mod_min = y_vals_metric_min
+                    else:
+                        y_mod_min = np.nanmin([y_mod_min, y_vals_metric_min])
+                    if math.isinf(y_mod_max):
+                        y_mod_max = y_vals_metric_max
+                    else:
+                        y_mod_max = np.nanmax([y_mod_max, y_vals_metric_max])
+                if (y_vals_metric_min > y_min_limit 
+                        and y_vals_metric_min <= y_mod_min):
+                    y_min = y_vals_metric_min
+                if (y_vals_metric_max < y_max_limit 
+                        and y_vals_metric_max >= y_mod_max):
+                    y_max = y_vals_metric_max
+            print("x and y vals:")
+            print(x_vals1)
+            print(y_vals_metric1)
+            if np.abs(y_vals_metric1_mean) < 1E4:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
+            else:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
+            plt.plot(
+                x_vals1.tolist(), y_vals_metric1, 
+                marker=setting_dicts[l]['marker'], 
+                c=setting_dicts[l]['color'], mew=2., mec='white', 
+                figure=fig, ms=setting_dicts[l]['markersize'], ls='solid', 
+                lw=setting_dicts[l]['linewidth']
+            )
+            if running_mean:
+                y_vals_rolling1 = pd.Series(y_vals_metric1).rolling(
+                    int(running_mean), center=True, min_periods=1
+                ).mean()
+                plt.plot(
+                    x_vals1.tolist(), y_vals_rolling1.tolist(),
+                    marker=None, c=setting_dicts[l]['color'], figure=fig, 
+                    ms=0., ls='solid', lw=setting_dicts[l]['linewidth'],
+                    alpha=0.5
+                )
+            if metric2_name is not None:
+                if np.abs(y_vals_metric2_mean) < 1E4:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2f}'
+                else:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2E}'
+                plt.plot(
+                    x_vals2.tolist(), y_vals_metric2, 
+                    marker=setting_dicts[l]['marker'], 
+                    c=setting_dicts[l]['color'], mew=2., mec='white', 
+                    figure=fig, ms=setting_dicts[l]['markersize'], 
+                    ls='dashed', lw=setting_dicts[l]['linewidth']
+                )
+                if running_mean:
+                    y_vals_rolling2 = pd.Series(y_vals_metric2).rolling(
+                        int(running_mean), center=True, min_periods=1
+                    ).mean()
+                    plt.plot(
+                        x_vals2.tolist(), y_vals_rolling2.tolist(),
+                        marker=None, c=setting_dicts[l]['color'], figure=fig, 
+                        ms=0., ls='dashed', lw=setting_dicts[l]['linewidth'],
+                        alpha=0.5
+                    )
+            if confidence_intervals:
+                plt.errorbar(
+                    x_vals1.tolist(), y_vals_metric1,
+                    yerr=[np.abs(y_vals_ci_lower1), y_vals_ci_upper1],
+                    fmt='none', ecolor=setting_dicts[l]['color'],
+                    elinewidth=setting_dicts[l]['linewidth'],
+                    capsize=10., capthick=setting_dicts[l]['linewidth'],
+                    alpha=.70, zorder=0
+                )
+                if metric2_name is not None:
+                    plt.errorbar(
+                        x_vals2.tolist(), y_vals_metric2,
+                        yerr=[np.abs(y_vals_ci_lower2), y_vals_ci_upper2],
+                        fmt='none', ecolor=setting_dicts[l]['color'],
+                        elinewidth=setting_dicts[l]['linewidth'],
+                        capsize=10., capthick=setting_dicts[l]['linewidth'],
+                        alpha=.70, zorder=0
+                    )
+            handles+=[
+                self.f(
+                    setting_dicts[l]['marker'], setting_dicts[l]['color'],
+                    'solid', setting_dicts[l]['linewidth'], 
+                    setting_dicts[l]['markersize'], 'white'
+                )
+            ]
+            if display_averages:
+                if metric2_name is not None:
+                    labels+=[
+                        f'{flead_plot_name} ({metric1_mean_fmt_string},'
+                        + f' {metric2_mean_fmt_string})'
+                    ]
+                else:
+                    labels+=[
+                        f'{flead_plot_name} ({metric1_mean_fmt_string})'
+                    ]
+            else:
+                labels+=[f'{flead_plot_name}']
 
+        return (fig, y_min, y_max, handles, labels)
 
+    def plot_by_model(self, fig, pivot_metric1, pivot_metric2, pivot_counts,
+                      pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, 
+                      pivot_ci_upper2, y_min, y_max, y_min_limit, y_max_limit, 
+                      x_vals1, x_vals2, metric1_name, metric2_name, 
+                      model_list, model_colors, mod_setting_dicts, 
+                      confidence_intervals=False, y_lim_lock=True,
+                      display_averages=False):
+        plot_reference = [False, False]
+        ref_metrics = ['OBAR']
+        if str(metric1_name).upper() in ref_metrics:
+            plot_reference[0] = True
+            pivot_reference1 = pivot_metric1
+            reference1 = pivot_reference1.mean(axis=1)
+            if confidence_intervals:
+                reference_ci_lower1 = pivot_ci_lower1.mean(axis=1)
+                reference_ci_upper1 = pivot_ci_upper1.mean(axis=1)
+            if not np.any((pivot_reference1.T/reference1).T == 1.):
+                logger.warning(
+                    f"{str(metric1_name).upper()} is requested, but the value "
+                    + f"varies from model to model. "
+                    + f"Will plot an individual line for each model. If a "
+                    + f"single reference line is preferred, set the "
+                    + f"sample_equalization toggle in ush/settings.py to 'True', "
+                    + f"and check in the log file if sample equalization "
+                    + f"completed successfully."
+                )
+                plot_reference[0] = False
+        if metric2_name is not None and str(metric2_name).upper() in ref_metrics:
+            plot_reference[1] = True
+            pivot_reference2 = pivot_metric2
+            reference2 = pivot_reference2.mean(axis=1)
+            if confidence_intervals:
+                reference_ci_lower2 = pivot_ci_lower2.mean(axis=1)
+                reference_ci_upper2 = pivot_ci_upper2.mean(axis=1)
+            if not np.any((pivot_reference2.T/reference2).T == 1.):
+                logger.warning(
+                    f"{str(metric2_name).upper()} is requested, but the value "
+                    + f"varies from model to model. "
+                    + f"Will plot an individual line for each model. If a "
+                    + f"single reference line is preferred, set the "
+                    + f"sample_equalization toggle in ush/settings.py to 'True', "
+                    + f"and check in the log file if sample equalization "
+                    + f"completed successfully."
+                )
+                plot_reference[1] = False
+        if np.any(plot_reference):
+            plotted_reference = [False, False]
+            if confidence_intervals:
+                plotted_reference_CIs = [False, False]
+        if metric2_name is not None:
+            if np.any(plot_reference):
+                ref_color_dict = model_colors.get_color_dict('obs')
+                handles = []
+                labels = []
+                line_settings = ['solid','dashed']
+                metric_names = [metric1_name, metric2_name]
+                for p, rbool in enumerate(plot_reference):
+                    if rbool:
+                        handles += [
+                            self.f('', ref_color_dict['color'], line_settings[p], 5., 0, 'white')
+                        ]
+                    else:
+                        handles += [
+                            self.f('', 'black', line_settings[p], 5., 0, 'white')
+                        ]
+                    labels += [
+                        str(metric_names[p]).upper()
+                    ]
+            else:
+                handles = [
+                    self.f('', 'black', line_setting, 5., 0, 'white')
+                    for line_setting in ['solid','dashed']
+                ]
+                labels = [
+                    str(metric_name).upper()
+                    for metric_name in [metric1_name, metric2_name]
+                ]
+        else:
+            handles = []
+            labels = []
+        n_mods = 0
+        for m in range(len(mod_setting_dicts)):
+            if model_list[m] in model_colors.model_alias:
+                model_plot_name = (
+                    model_colors.model_alias[model_list[m]]['plot_name']
+                )
+            else:
+                model_plot_name = model_list[m]
+            if str(model_list[m]) not in pivot_metric1:
+                continue
+            y_vals_metric1 = pivot_metric1[str(model_list[m])].values
+            y_vals_metric1_mean = np.nanmean(y_vals_metric1)
+            if metric2_name is not None:
+                y_vals_metric2 = pivot_metric2[str(model_list[m])].values
+                y_vals_metric2_mean = np.nanmean(y_vals_metric2)
+            if confidence_intervals:
+                y_vals_ci_lower1 = pivot_ci_lower1[
+                    str(model_list[m])
+                ].values
+                y_vals_ci_upper1 = pivot_ci_upper1[
+                    str(model_list[m])
+                ].values
+                if metric2_name is not None:
+                    y_vals_ci_lower2 = pivot_ci_lower2[
+                        str(model_list[m])
+                    ].values
+                    y_vals_ci_upper2 = pivot_ci_upper2[
+                        str(model_list[m])
+                    ].values
+            if not y_lim_lock:
+                if metric2_name is not None:
+                    y_vals_both_metrics = np.concatenate((y_vals_metric1, y_vals_metric2))
+                    if np.any(y_vals_both_metrics != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics)
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics)
+                else:
+                    if np.any(y_vals_metric1 != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_metric1[y_vals_metric1 != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_metric1[y_vals_metric1 != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_metric1)
+                        y_vals_metric_max = np.nanmax(y_vals_metric1)
+                if n_mods == 0:
+                    y_mod_min = y_vals_metric_min
+                    y_mod_max = y_vals_metric_max
+                    counts = pivot_counts[str(model_list[m])].values
+                    n_mods+=1
+                else:
+                    if math.isinf(y_mod_min):
+                        y_mod_min = y_vals_metric_min
+                    else:
+                        y_mod_min = np.nanmin([y_mod_min, y_vals_metric_min])
+                    if math.isinf(y_mod_max):
+                        y_mod_max = y_vals_metric_max
+                    else:
+                        y_mod_max = np.nanmax([y_mod_max, y_vals_metric_max])
+                if (y_vals_metric_min > y_min_limit 
+                        and y_vals_metric_min <= y_mod_min):
+                    y_min = y_vals_metric_min
+                if (y_vals_metric_max < y_max_limit 
+                        and y_vals_metric_max >= y_mod_max):
+                    y_max = y_vals_metric_max
+            if np.abs(y_vals_metric1_mean) < 1E4:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
+            else:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
+            if plot_reference[0]:
+                if not plotted_reference[0]:
+                    ref_color_dict = model_colors.get_color_dict('obs')
+                    plt.plot(
+                        x_vals1.tolist(), reference1,
+                        marker=ref_color_dict['marker'],
+                        c=ref_color_dict['color'], mew=2., mec='white',
+                        figure=fig, ms=ref_color_dict['markersize'], ls='solid',
+                        lw=ref_color_dict['linewidth']
+                    )
+                    plotted_reference[0] = True
+            else:
+                plt.plot(
+                    x_vals1.tolist(), y_vals_metric1, 
+                    marker=mod_setting_dicts[m]['marker'], 
+                    c=mod_setting_dicts[m]['color'], mew=2., mec='white', 
+                    figure=fig, ms=mod_setting_dicts[m]['markersize'], ls='solid', 
+                    lw=mod_setting_dicts[m]['linewidth']
+                )
+            if metric2_name is not None:
+                if np.abs(y_vals_metric2_mean) < 1E4:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2f}'
+                else:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2E}'
+                if plot_reference[1]:
+                    if not plotted_reference[1]:
+                        ref_color_dict = model_colors.get_color_dict('obs')
+                        plt.plot(
+                            x_vals2.tolist(), reference2,
+                            marker=ref_color_dict['marker'],
+                            c=ref_color_dict['color'], mew=2., mec='white',
+                            figure=fig, ms=ref_color_dict['markersize'], ls='dashed',
+                            lw=ref_color_dict['linewidth']
+                        )
+                        plotted_reference[1] = True
+                else:
+                    plt.plot(
+                        x_vals2.tolist(), y_vals_metric2, 
+                        marker=mod_setting_dicts[m]['marker'], 
+                        c=mod_setting_dicts[m]['color'], mew=2., mec='white', 
+                        figure=fig, ms=mod_setting_dicts[m]['markersize'], 
+                        ls='dashed', lw=mod_setting_dicts[m]['linewidth']
+                    )
+            if confidence_intervals:
+                if plot_reference[0]:
+                    if not plotted_reference_CIs[0]:
+                        ref_color_dict = model_colors.get_color_dict('obs')
+                        plt.errorbar(
+                            x_vals1.tolist(), reference1,
+                            yerr=[np.abs(reference_ci_lower1), reference_ci_upper1],
+                            fmt='none', ecolor=ref_color_dict['color'],
+                            elinewidth=ref_color_dict['linewidth'],
+                            capsize=10., capthick=ref_color_dict['linewidth'],
+                            alpha=.70, zorder=0
+                        )
+                        plotted_reference_CIs[0] = True
+                else:
+                    plt.errorbar(
+                        x_vals1.tolist(), y_vals_metric1,
+                        yerr=[np.abs(y_vals_ci_lower1), y_vals_ci_upper1],
+                        fmt='none', ecolor=mod_setting_dicts[m]['color'],
+                        elinewidth=mod_setting_dicts[m]['linewidth'],
+                        capsize=10., capthick=mod_setting_dicts[m]['linewidth'],
+                        alpha=.70, zorder=0
+                    )
+                if metric2_name is not None:
+                    if plot_reference[1]:
+                        if not plotted_reference_CIs[1]:
+                            ref_color_dict = model_colors.get_color_dict('obs')
+                            plt.errorbar(
+                                x_vals2.tolist(), reference2,
+                                yerr=[np.abs(reference_ci_lower2), reference_ci_upper2],
+                                fmt='none', ecolor=ref_color_dict['color'],
+                                elinewidth=ref_color_dict['linewidth'],
+                                capsize=10., capthick=ref_color_dict['linewidth'],
+                                alpha=.70, zorder=0
+                            )
+                            plotted_reference_CIs[1] = True
+                    else:
+                        plt.errorbar(
+                            x_vals2.tolist(), y_vals_metric2,
+                            yerr=[np.abs(y_vals_ci_lower2), y_vals_ci_upper2],
+                            fmt='none', ecolor=mod_setting_dicts[m]['color'],
+                            elinewidth=mod_setting_dicts[m]['linewidth'],
+                            capsize=10., capthick=mod_setting_dicts[m]['linewidth'],
+                            alpha=.70, zorder=0
+                        )
+            handles+=[
+                self.f(
+                    mod_setting_dicts[m]['marker'], mod_setting_dicts[m]['color'],
+                    'solid', mod_setting_dicts[m]['linewidth'], 
+                    mod_setting_dicts[m]['markersize'], 'white'
+                )
+            ]
+            if display_averages:
+                if metric2_name is not None:
+                    labels+=[
+                        f'{model_plot_name} ({metric1_mean_fmt_string},'
+                        + f' {metric2_mean_fmt_string})'
+                    ]
+                else:
+                    labels+=[
+                        f'{model_plot_name} ({metric1_mean_fmt_string})'
+                    ]
+            else:
+                labels+=[f'{model_plot_name}']
 
+        return (fig, y_min, y_max, handles, labels)

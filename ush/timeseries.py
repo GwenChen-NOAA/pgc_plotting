@@ -77,7 +77,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
                      plot_logo_right: bool = False, path_logo_left: str = '.',
                      path_logo_right: str = '.', zoom_logo_left: float = 1.,
                      zoom_logo_right: float = 1., aggregate_dates_by: str = '',
-                     running_mean: str = ''):
+                     running_mean: str = '', color_by: str = 'model'):
 
     logger.info("========================================")
     logger.info(f"Creating Plot {num} ...")
@@ -92,6 +92,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     domain_translator = reference.domain_translator
     model_settings = model_colors.model_settings
 
+    print(f"aggregate_dates_by 5: {aggregate_dates_by}")
     # filter by level
     df = df[df['FCST_LEV'].astype(str).eq(str(level))]
 
@@ -118,6 +119,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         plt.close(num)
         logger.info("========================================")
         return None
+    print(f"aggregate_dates_by 4: {aggregate_dates_by}")
 
     # Filter by interpolation width
     df, interp_pts_string, interp_pts_save_string = plot_util.filter_by_width(
@@ -131,6 +133,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
 
     # Remove from model_list the models that don't exist in the dataframe
     df, model_list = plot_util.process_models(logger, df, model_list)
+    print(f"aggregate_dates_by 3: {aggregate_dates_by}")
 
     if df.empty:
         logger.warning(f"Empty Dataframe. Continuing onto next plot...")
@@ -140,9 +143,12 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
 
     # Equalize Samples
     # Note: groups are used for equalization, not as axes for plotting
-    group_by = ['MODEL',str(date_type).upper()]
+    #group_by = ['MODEL',str(date_type).upper()]
+    group_by = [color_by,str(date_type).upper()]
     if sample_equalization:
-        df, bool_success = plot_util.equalize_samples(logger, df, group_by)
+        df, bool_success = plot_util.equalize_samples(
+            logger, df, group_by, color_by=color_by
+        )
         if not bool_success:
             sample_equalization = False
         if df.empty:
@@ -151,6 +157,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             logger.info("========================================")
             return None
 
+    print(f"aggregate_dates_by 2: {aggregate_dates_by}")
     # Aggregate unit statistics and calculate metrics
     df_groups = df.groupby(group_by)
     metrics_using_var_units = [
@@ -159,33 +166,41 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         'FBAR_OBAR_SPEED','FBAR_OBAR_DIR','FBAR_SPEED','FBAR_DIR'
     ]
     df_aggregated, metric_long_names, units, unit_convert = plot_util.process_stats(
-        logger, df, df_groups, model_list, metric1_name, metric2_name, 
+        logger, df, df_groups, model_list, flead, metric1_name, metric2_name, 
         metrics_using_var_units, confidence_intervals, date_type, line_type,
         'timeseries', bs_method, bs_nrep, bs_min_samp, ci_lev, reference, 
         sample_equalization=sample_equalization,
-        keep_shared_events_only=keep_shared_events_only,
+        keep_shared_events_only=keep_shared_events_only, color_by=color_by
 
     )
     
     # Make pivot tables for plotting
+    print(f"aggregate_dates_by 1: {aggregate_dates_by}")
+    print("ONE!!")
     pivot_tables = plot_util.get_pivot_tables(
         df_aggregated, metric1_name, metric2_name, sample_equalization, 
         keep_shared_events_only, date_type, confidence_intervals, 
-        'timeseries', aggregate_dates_by=aggregate_dates_by, colname='MODEL'
+        'timeseries', aggregate_dates_by=aggregate_dates_by, colname=color_by
     )
-    pivot_metric1, pivot_metric2 = pivot_tables[:2]
-    pivot_ci_lower1, pivot_ci_upper1 = pivot_tables[2:4]
-    pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[4:]
+    print(f"aggregate_dates_by 0: {aggregate_dates_by}")
+    print("TWO!!")
+    pivot_metric1, pivot_metric2, pivot_counts = pivot_tables[:3]
+    pivot_ci_lower1, pivot_ci_upper1 = pivot_tables[3:5]
+    pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[5:]
+    print(pivot_metric1)
+    print(f"aggregate_dates_by -1: {aggregate_dates_by}")
 
     # Reindex pivot table with full list of dates, introducing NaNs 
     pivot_tables, incr = plot_util.reindex_pivot_tables(
-        pivot_metric2, pivot_metric2, pivot_counts, pivot_ci_lower1, 
-        pivot_ci_upper2, pivot_ci_lower2, pivot_ci_upper2, 'timeseries', 
-        date_hours, metric2_name, sample_equalization, confidence_intervals
+        pivot_metric1, pivot_metric2, pivot_counts, pivot_ci_lower1, 
+        pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2, 'timeseries', 
+        date_range, date_hours, metric2_name, sample_equalization, 
+        confidence_intervals, aggregate_dates_by=aggregate_dates_by
     )
     pivot_metric1, pivot_metric2, pivot_counts = pivot_tables[:3]
     pivot_ci_lower1, pivot_ci_upper1 = pivot_tables[3:5]
     pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[5:]
+    print(pivot_metric1)
     if (metric2_name and (pivot_metric1.empty or pivot_metric2.empty)):
         print_varname = df['FCST_VAR'].tolist()[0]
         logger.warning(
@@ -211,9 +226,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         logger.info("========================================")
         return None
     
-    # Get plot settings for models
-    mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors)
-
     # Plot data
     logger.info("Begin plotting ...")
     if confidence_intervals:
@@ -250,7 +262,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     y_min = y_min_limit
     y_max = y_max_limit
     if thresh and '' not in thresh:
-        thresh_labels = np.unique(df['FCST_THRESH_VALUE'])
+        thresh_labels = np.unique(df['OBS_THRESH_VALUE'])
         thresh_argsort = np.argsort(thresh_labels.astype(float))
         requested_thresh_argsort = np.argsort([
             float(item) for item in requested_thresh_value
@@ -259,264 +271,56 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         requested_thresh_labels = [
             requested_thresh_value[i] for i in requested_thresh_argsort
         ]
-    plot_reference = [False, False]
-    ref_metrics = ['OBAR']
-    if str(metric1_name).upper() in ref_metrics:
-        plot_reference[0] = True
-        pivot_reference1 = pivot_metric1
-        reference1 = pivot_reference1.mean(axis=1)
-        if confidence_intervals:
-            reference_ci_lower1 = pivot_ci_lower1.mean(axis=1)
-            reference_ci_upper1 = pivot_ci_upper1.mean(axis=1)
-        if not np.any((pivot_reference1.T/reference1).T == 1.):
-            logger.warning(
-                f"{str(metric1_name).upper()} is requested, but the value "
-                + f"varies from model to model. "
-                + f"Will plot an individual line for each model. If a "
-                + f"single reference line is preferred, set the "
-                + f"sample_equalization toggle in ush/settings.py to 'True', "
-                + f"and check in the log file if sample equalization "
-                + f"completed successfully."
-            )
-            plot_reference[0] = False
-    if metric2_name is not None and str(metric2_name).upper() in ref_metrics:
-        plot_reference[1] = True
-        pivot_reference2 = pivot_metric2
-        reference2 = pivot_reference2.mean(axis=1)
-        if confidence_intervals:
-            reference_ci_lower2 = pivot_ci_lower2.mean(axis=1)
-            reference_ci_upper2 = pivot_ci_upper2.mean(axis=1)
-        if not np.any((pivot_reference2.T/reference2).T == 1.):
-            logger.warning(
-                f"{str(metric2_name).upper()} is requested, but the value "
-                + f"varies from model to model. "
-                + f"Will plot an individual line for each model. If a "
-                + f"single reference line is preferred, set the "
-                + f"sample_equalization toggle in ush/settings.py to 'True', "
-                + f"and check in the log file if sample equalization "
-                + f"completed successfully."
-            )
-            plot_reference[1] = False
-    if np.any(plot_reference):
-        plotted_reference = [False, False]
-        if confidence_intervals:
-            plotted_reference_CIs = [False, False]
-    f = lambda m,c,ls,lw,ms,mec: plt.plot(
-        [], [], marker=m, mec=mec, mew=2., c=c, ls=ls, lw=lw, ms=ms
-    )[0]
-    if metric2_name is not None:
-        if np.any(plot_reference):
-            ref_color_dict = model_colors.get_color_dict('obs')
-            handles = []
-            labels = []
-            line_settings = ['solid','dashed']
-            metric_names = [metric1_name, metric2_name]
-            for p, rbool in enumerate(plot_reference):
-                if rbool:
-                    handles += [
-                        f('', ref_color_dict['color'], line_settings[p], 5., 0, 'white')
-                    ]
-                else:
-                    handles += [
-                        f('', 'black', line_settings[p], 5., 0, 'white')
-                    ]
-                labels += [
-                    str(metric_names[p]).upper()
-                ]
-        else:
-            handles = [
-                f('', 'black', line_setting, 5., 0, 'white')
-                for line_setting in ['solid','dashed']
-            ]
-            labels = [
-                str(metric_name).upper()
-                for metric_name in [metric1_name, metric2_name]
-            ]
+    
+    print(color_by)
+    print(confidence_intervals)
+    print(pivot_metric1)
+    if color_by == 'MODEL':
+        # Get plot settings for models
+        mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors, model_settings)
+
+        fig, y_min, y_max, handles, labels = plotter.plot_by_model(
+            fig, pivot_metric1, pivot_metric2, pivot_counts,
+            pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
+            y_min, y_max, y_min_limit, y_max_limit,
+            x_vals1, x_vals2, metric1_name, metric2_name,
+            model_list, model_colors, mod_setting_dicts, 
+            confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
+            display_averages=display_averages
+        )
+    elif color_by == 'LEAD_HOURS':
+        # Get plot settings for models
+        lead_setting_dicts = plot_util.get_lead_settings(flead, model_colors)
+
+        fig, y_min, y_max, handles, labels = plotter.plot_by_lead(
+            fig, pivot_metric1, pivot_metric2, pivot_counts,
+            pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
+            y_min, y_max, y_min_limit, y_max_limit,
+            x_vals1, x_vals2, metric1_name, metric2_name, 
+            flead, model_list, model_colors, lead_setting_dicts, 
+            confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
+            display_averages=display_averages, running_mean=running_mean
+        )
     else:
-        handles = []
-        labels = []
-    n_mods = 0
-    for m in range(len(mod_setting_dicts)):
-        if model_list[m] in model_colors.model_alias:
-            model_plot_name = (
-                model_colors.model_alias[model_list[m]]['plot_name']
-            )
-        else:
-            model_plot_name = model_list[m]
-        if str(model_list[m]) not in pivot_metric1:
-            continue
-        y_vals_metric1 = pivot_metric1[str(model_list[m])].values
-        y_vals_metric1_mean = np.nanmean(y_vals_metric1)
-        if metric2_name is not None:
-            y_vals_metric2 = pivot_metric2[str(model_list[m])].values
-            y_vals_metric2_mean = np.nanmean(y_vals_metric2)
-        if confidence_intervals:
-            y_vals_ci_lower1 = pivot_ci_lower1[
-                str(model_list[m])
-            ].values
-            y_vals_ci_upper1 = pivot_ci_upper1[
-                str(model_list[m])
-            ].values
-            if metric2_name is not None:
-                y_vals_ci_lower2 = pivot_ci_lower2[
-                    str(model_list[m])
-                ].values
-                y_vals_ci_upper2 = pivot_ci_upper2[
-                    str(model_list[m])
-                ].values
-        if not y_lim_lock:
-            if metric2_name is not None:
-                y_vals_both_metrics = np.concatenate((y_vals_metric1, y_vals_metric2))
-                if np.any(y_vals_both_metrics != np.inf):
-                    y_vals_metric_min = np.nanmin(y_vals_both_metrics[y_vals_both_metrics != np.inf])
-                    y_vals_metric_max = np.nanmax(y_vals_both_metrics[y_vals_both_metrics != np.inf])
-                else:
-                    y_vals_metric_min = np.nanmin(y_vals_both_metrics)
-                    y_vals_metric_max = np.nanmax(y_vals_both_metrics)
-            else:
-                if np.any(y_vals_metric1 != np.inf):
-                    y_vals_metric_min = np.nanmin(y_vals_metric1[y_vals_metric1 != np.inf])
-                    y_vals_metric_max = np.nanmax(y_vals_metric1[y_vals_metric1 != np.inf])
-                else:
-                    y_vals_metric_min = np.nanmin(y_vals_metric1)
-                    y_vals_metric_max = np.nanmax(y_vals_metric1)
-            if n_mods == 0:
-                y_mod_min = y_vals_metric_min
-                y_mod_max = y_vals_metric_max
-                counts = pivot_counts[str(model_list[m])].values
-                n_mods+=1
-            else:
-                if math.isinf(y_mod_min):
-                    y_mod_min = y_vals_metric_min
-                else:
-                    y_mod_min = np.nanmin([y_mod_min, y_vals_metric_min])
-                if math.isinf(y_mod_max):
-                    y_mod_max = y_vals_metric_max
-                else:
-                    y_mod_max = np.nanmax([y_mod_max, y_vals_metric_max])
-            if (y_vals_metric_min > y_min_limit 
-                    and y_vals_metric_min <= y_mod_min):
-                y_min = y_vals_metric_min
-            if (y_vals_metric_max < y_max_limit 
-                    and y_vals_metric_max >= y_mod_max):
-                y_max = y_vals_metric_max
-        if np.abs(y_vals_metric1_mean) < 1E4:
-            metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
-        else:
-            metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
-        if plot_reference[0]:
-            if not plotted_reference[0]:
-                ref_color_dict = model_colors.get_color_dict('obs')
-                plt.plot(
-                    x_vals1.tolist(), reference1,
-                    marker=ref_color_dict['marker'],
-                    c=ref_color_dict['color'], mew=2., mec='white',
-                    figure=fig, ms=ref_color_dict['markersize'], ls='solid',
-                    lw=ref_color_dict['linewidth']
-                )
-                plotted_reference[0] = True
-        else:
-            plt.plot(
-                x_vals1.tolist(), y_vals_metric1, 
-                marker=mod_setting_dicts[m]['marker'], 
-                c=mod_setting_dicts[m]['color'], mew=2., mec='white', 
-                figure=fig, ms=mod_setting_dicts[m]['markersize'], ls='solid', 
-                lw=mod_setting_dicts[m]['linewidth']
-            )
-        if metric2_name is not None:
-            if np.abs(y_vals_metric2_mean) < 1E4:
-                metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2f}'
-            else:
-                metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2E}'
-            if plot_reference[1]:
-                if not plotted_reference[1]:
-                    ref_color_dict = model_colors.get_color_dict('obs')
-                    plt.plot(
-                        x_vals2.tolist(), reference2,
-                        marker=ref_color_dict['marker'],
-                        c=ref_color_dict['color'], mew=2., mec='white',
-                        figure=fig, ms=ref_color_dict['markersize'], ls='dashed',
-                        lw=ref_color_dict['linewidth']
-                    )
-                    plotted_reference[1] = True
-            else:
-                plt.plot(
-                    x_vals2.tolist(), y_vals_metric2, 
-                    marker=mod_setting_dicts[m]['marker'], 
-                    c=mod_setting_dicts[m]['color'], mew=2., mec='white', 
-                    figure=fig, ms=mod_setting_dicts[m]['markersize'], 
-                    ls='dashed', lw=mod_setting_dicts[m]['linewidth']
-                )
-        if confidence_intervals:
-            if plot_reference[0]:
-                if not plotted_reference_CIs[0]:
-                    ref_color_dict = model_colors.get_color_dict('obs')
-                    plt.errorbar(
-                        x_vals1.tolist(), reference1,
-                        yerr=[np.abs(reference_ci_lower1), reference_ci_upper1],
-                        fmt='none', ecolor=ref_color_dict['color'],
-                        elinewidth=ref_color_dict['linewidth'],
-                        capsize=10., capthick=ref_color_dict['linewidth'],
-                        alpha=.70, zorder=0
-                    )
-                    plotted_reference_CIs[0] = True
-            else:
-                plt.errorbar(
-                    x_vals1.tolist(), y_vals_metric1,
-                    yerr=[np.abs(y_vals_ci_lower1), y_vals_ci_upper1],
-                    fmt='none', ecolor=mod_setting_dicts[m]['color'],
-                    elinewidth=mod_setting_dicts[m]['linewidth'],
-                    capsize=10., capthick=mod_setting_dicts[m]['linewidth'],
-                    alpha=.70, zorder=0
-                )
-            if metric2_name is not None:
-                if plot_reference[1]:
-                    if not plotted_reference_CIs[1]:
-                        ref_color_dict = model_colors.get_color_dict('obs')
-                        plt.errorbar(
-                            x_vals2.tolist(), reference2,
-                            yerr=[np.abs(reference_ci_lower2), reference_ci_upper2],
-                            fmt='none', ecolor=ref_color_dict['color'],
-                            elinewidth=ref_color_dict['linewidth'],
-                            capsize=10., capthick=ref_color_dict['linewidth'],
-                            alpha=.70, zorder=0
-                        )
-                        plotted_reference_CIs[1] = True
-                else:
-                    plt.errorbar(
-                        x_vals2.tolist(), y_vals_metric2,
-                        yerr=[np.abs(y_vals_ci_lower2), y_vals_ci_upper2],
-                        fmt='none', ecolor=mod_setting_dicts[m]['color'],
-                        elinewidth=mod_setting_dicts[m]['linewidth'],
-                        capsize=10., capthick=mod_setting_dicts[m]['linewidth'],
-                        alpha=.70, zorder=0
-                    )
-        handles+=[
-            f(
-                mod_setting_dicts[m]['marker'], mod_setting_dicts[m]['color'],
-                'solid', mod_setting_dicts[m]['linewidth'], 
-                mod_setting_dicts[m]['markersize'], 'white'
-            )
-        ]
-        if display_averages:
-            if metric2_name is not None:
-                labels+=[
-                    f'{model_plot_name} ({metric1_mean_fmt_string},'
-                    + f' {metric2_mean_fmt_string})'
-                ]
-            else:
-                labels+=[
-                    f'{model_plot_name} ({metric1_mean_fmt_string})'
-                ]
-        else:
-            labels+=[f'{model_plot_name}']
+        # Get plot settings for models
+        mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors, model_settings)
+
+        fig, y_min, y_max, handles, labels = plotter.plot_by_model(
+            fig, pivot_metric1, pivot_metric2, pivot_counts,
+            pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
+            y_min, y_max, y_min_limit, y_max_limit,
+            x_vals1, x_vals2, metric1_name, metric2_name, 
+            model_list, model_colors, mod_setting_dicts, 
+            confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
+            display_averages=display_averages
+        )
 
     # Plot zero line
     plt.axhline(y=0, color='black', linestyle='--', linewidth=1, zorder=0) 
     
     # Configure x-axis
     x_axis_config = plot_util.configure_dates_axis(
-        xvals1, incr
+        x_vals1, incr, aggregate_dates_by
     )
     xticks, xtick_labels_with_blanks = x_axis_config
 
@@ -785,6 +589,23 @@ def main():
              + f" VALID or INIT")
         logger.error(e)
         raise ValueError(e)
+    
+    if COLOR_BY in ['lead','LEAD']:
+        color_by = 'LEAD_HOURS'
+    elif COLOR_BY in ['model','MODEL']:
+        color_by = 'MODEL'
+    else:
+        if not COLOR_BY:
+            color_by = 'MODEL'
+            logger.info(
+                "color_by is not set.  Setting to default value \"MODEL\""
+            )
+        else:
+            color_by = 'MODEL'
+            logger.warning(
+                f"color_by value is not recognized: \"{color_by}\".  "
+                + f"Setting to default value \"MODEL\""
+            )
 
     logger.debug('========================================')
     logger.debug("Config file settings")
@@ -851,6 +672,15 @@ def main():
     logger.debug(
         f"Upper-right logo fraction of original size: {zoom_logo_right}"
     )
+    logger.debug(
+        f"Aggregate dates? {'yes' if aggregate_dates_by else 'no'}"
+    )
+    logger.debug(
+        f"Running mean? {'yes' if running_mean else 'no'}"
+    )
+    logger.debug(
+        f"Coloring lines based on {'lead time.' if color_by=='LEAD_HOURS' else 'model.'}"
+    )
     if CONFIDENCE_INTERVALS:
         logger.debug(f"Confidence Level: {int(ci_lev*100)}%")
         logger.debug(f"Bootstrap method: {bs_method}")
@@ -859,7 +689,7 @@ def main():
             f"Minimum sample size for confidence intervals: {bs_min_samp}"
         )
     logger.debug('========================================')
-
+    
     date_range = (
         datetime.strptime(date_beg, '%Y%m%d'), 
         datetime.strptime(date_end, '%Y%m%d')+td(days=1)-td(milliseconds=1)
@@ -998,7 +828,7 @@ def main():
                     continue
                 plot_time_series(
                     df, logger, date_range, MODELS, num=num, flead=FLEADS, 
-                    level=fcst_level, thresh=fcst_thresh, 
+                    level=fcst_level, thresh=obs_thresh, 
                     metric1_name=metrics[0], metric2_name=metrics[1], 
                     date_type=DATE_TYPE, y_min_limit=Y_MIN_LIMIT, 
                     y_max_limit=Y_MAX_LIMIT, y_lim_lock=Y_LIM_LOCK, 
@@ -1021,7 +851,7 @@ def main():
                     zoom_logo_left=zoom_logo_left,
                     zoom_logo_right=zoom_logo_right,
                     aggregate_dates_by=aggregate_dates_by,
-                    running_mean=running_mean
+                    running_mean=running_mean, color_by=color_by,
                 )
                 num+=1
 
@@ -1115,9 +945,13 @@ if __name__ == "__main__":
 
     # Interval at which dates are aggregated, empty for no aggregation
     aggregate_dates_by = toggle.plot_settings['aggregate_dates_by']
+    print(f"aggregate_dates_by 10: {aggregate_dates_by}")
 
     # Whether or not to display running means, averaged across given period
     running_mean = toggle.plot_settings['running_mean']
+
+    # Which column to use to determine which and how many different-colored lines to plot
+    COLOR_BY = toggle.plot_settings['color_by']
 
     # Whether or not to clear the intermediate directory that stores pruned data
     clear_prune_dir = toggle.plot_settings['clear_prune_directory']

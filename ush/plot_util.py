@@ -11,15 +11,17 @@
 import os
 import sys
 from datetime import datetime, timedelta as td
+from dateutil.relativedelta import relativedelta
 import time
 import numpy as np
 import pandas as pd
 import warnings
+import math
 warnings.filterwarnings('ignore')
 """!@namespace plot_util
    @brief Provides utility functions for PGC plotting use case
 """
-
+import pickle
 
 def aggregate_stats(df_groups, model_list, date_type, line_type, plot_type, 
                     sample_equalization=True, keep_shared_events_only=True, 
@@ -1393,10 +1395,10 @@ def calculate_stat(logger, model_data, stat, conversion):
    nindex = stat_values.index.nlevels
    return stat_values, None, stat_plot_name
 
-def configure_dates_axis(xvals, incr):
+def configure_dates_axis(x_vals1, incr, aggregate_dates_by):
     if aggregate_dates_by:
         if aggregate_dates_by in ['m','month']: 
-            xticks = x_vals1 
+            xticks = x_vals1
             xtick_labels = [
                 datetime.strptime(xtick, '%Y%m').strftime('%b %Y') 
                 for xtick in xticks
@@ -1513,18 +1515,28 @@ def daterange(start: datetime, end: datetime, td: td) -> datetime:
         yield curr
         curr+=td
 
-def equalize_samples(logger, df, group_by):
+def equalize_samples(logger, df, group_by, color_by='MODEL'):
     # columns that will be used to drop duplicate rows across model groups
-    cols_to_check = [
-        key for key in [
-            'LEAD_HOURS', 'VALID', 'INIT', 'FCST_THRESH_SYMBOL', 
-            'FCST_THRESH_VALUE', 'OBS_LEV']
-        if key in df.keys()
-    ]
+    if color_by == 'LEAD_HOURS':
+        cols_to_check = [
+            key for key in [
+                'MODEL', 'VALID', 'OBS_THRESH_SYMBOL', 
+                'OBS_THRESH_VALUE', 'OBS_LEV']
+            if key in df.keys()
+        ]
+    else:
+        cols_to_check = [
+            key for key in [
+                'LEAD_HOURS', 'VALID', 'INIT', 'OBS_THRESH_SYMBOL', 
+                'OBS_THRESH_VALUE', 'OBS_LEV']
+            if key in df.keys()
+        ]
     df_groups = df.groupby(group_by)
     indexes = []
     # List all of the independent variables that are found in the data
     unique_indep_vars = np.unique(np.array(list(df_groups.groups.keys())).T[1])
+    #with open('/scratch2/NCEPDEV/ovp/Marcel.Caron/dev/equalization.pkl','wb') as f:
+    #    pickle.dump([df, group_by], f)
     for unique_indep_var in unique_indep_vars:
         # Get all groups, in the form of DataFrames, that include the given 
         # independent variable
@@ -1559,9 +1571,14 @@ def equalize_samples(logger, df, group_by):
     # Remove duplicates again, this time among both the columns 
     # in cols_to_check and the 'MODEL' column, which avoids, say, models with
     # repeated data from multiple entities
-    df_equalized = df_equalized.loc[
-        df_equalized[cols_to_check+['MODEL']].drop_duplicates().index
-    ]
+    if color_by == 'LEAD_HOURS':
+        df_equalized = df_equalized.loc[
+            df_equalized[cols_to_check+[color_by]].drop_duplicates().index
+        ]
+    else:
+        df_equalized = df_equalized.loc[
+            df_equalized[cols_to_check+['MODEL']].drop_duplicates().index
+        ]
     # Remove duplicates again, this time among both the columns 
     # Regroup the data and move forward with these groups!
     df_equalized_groups = df_equalized.groupby(group_by)
@@ -1773,6 +1790,53 @@ def get_domain_info(df, domain_translator):
         domain_save_string = domain
     return domain_string, domain_save_string
 
+def get_lead_settings(lead_list, lead_colors):
+    leads_renamed = []
+    temp_colors = []
+    num=1
+    for requested_lead in lead_list:
+        leads_renamed.append(f'lead{num}')
+        num+=1
+    leads_renamed = np.array(leads_renamed)
+    # Check that there are no repeated colors
+    temp_colors = [
+        lead_colors.get_color_dict(name)['color'] for name in leads_renamed
+    ]
+    colors_corrected=False
+    loop_count=0
+    while not colors_corrected and loop_count < 10:
+        unique, counts = np.unique(temp_colors, return_counts=True)
+        repeated_colors = [u for i, u in enumerate(unique) if counts[i] > 1]
+        if repeated_colors:
+            for c in repeated_colors:
+                leads_sharing_colors = leads_renamed[
+                    np.array(temp_colors)==c
+                ]
+                if np.flatnonzero(np.core.defchararray.find(
+                        leads_sharing_colors, 'lead')!=-1):
+                    need_to_rename = leads_sharing_colors[np.flatnonzero(
+                        np.core.defchararray.find(
+                            leads_sharing_colors, 'lead'
+                        )!=-1)[0]
+                    ]
+                else:
+                    continue
+                leads_renamed[leads_renamed==need_to_rename] = (
+                    'lead'+str(count_renamed)
+                )
+                count_renamed+=1
+            temp_colors = [
+                lead_colors.get_color_dict(name)['color'] 
+                for name in leads_renamed
+            ]
+            loop_count+=1
+        else:
+            colors_corrected = True
+    lead_setting_dicts = [
+        lead_colors.get_color_dict(name) for name in leads_renamed
+    ]
+    return lead_setting_dicts
+
 def get_level_info(verif_type, level, var_long_name_key, var_savename):
     if str(level).upper() in ['CEILING', 'TOTAL', 'PBL']:
         if str(level).upper() == 'CEILING':
@@ -1875,7 +1939,7 @@ def get_memory_usage():
         str(round((used_memory/total_memory) * 100, 2))
     ))
 
-def get_model_settings(model_list, model_colors):
+def get_model_settings(model_list, model_colors, model_settings):
     models_renamed = []
     count_renamed = 1
     for requested_model in model_list:
@@ -1926,7 +1990,7 @@ def get_model_settings(model_list, model_colors):
     mod_setting_dicts = [
         model_colors.get_color_dict(name) for name in models_renamed
     ]
-    return mod_settings_dicts
+    return mod_setting_dicts
 
 def get_model_stats_key(model_alias_dict, requested_model):
     if requested_model not in model_alias_dict:
@@ -2002,21 +2066,26 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
             index_colname = str(date_type).upper()
     elif plot_type == 'fhrmean':
         index_colname = 'LEAD_HOURS'
+    print(index_colname)
+    print(df_aggregated)
+    print(df_aggregated[str(metric1_name).upper()])
     pivot_metric1 = pd.pivot_table(
         df_aggregated, values=str(metric1_name).upper(), columns=colname, 
-        index=index_colname
+        index=index_colname, aggfunc=np.nanmean
     )
     if sample_equalization:
         pivot_counts = pd.pivot_table(
             df_aggregated, values='COUNTS', columns=colname,
             index=index_colname
         )
+    else:
+        pivot_counts = None
     if keep_shared_events_only:
         pivot_metric1 = pivot_metric1.dropna() 
     if metric2_name is not None:
         pivot_metric2 = pd.pivot_table(
             df_aggregated, values=str(metric2_name).upper(), columns=colname, 
-            index=index_colname
+            index=index_colname, aggfunc=np.nanmean
         )
         if keep_shared_events_only:
             pivot_metric2 = pivot_metric2.dropna()
@@ -2048,9 +2117,10 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
         pivot_ci_upper1 = None
         pivot_ci_lower2 = None
         pivot_ci_upper2 = None
+    print(f"aggregate_dates_by A: {aggregate_dates_by}")
     return (
-        pivot_metric1, pivot_metric2, pivot_ci_lower1, pivot_ci_upper1, 
-        pivot_ci_lower2, pivot_ci_upper2
+        pivot_metric1, pivot_metric2, pivot_counts, pivot_ci_lower1, 
+        pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2
     )
 
 def get_stat_file_base_columns(met_version):
@@ -2445,11 +2515,11 @@ def process_models(logger, df, model_list):
             )
     return df, model_list
 
-def process_stats(logger, df, df_groups, model_list, metric1_name, metric2_name, 
+def process_stats(logger, df, df_groups, model_list, flead, metric1_name, metric2_name, 
                   metrics_using_var_units, confidence_intervals, date_type,
                   line_type, plot_type, bs_method, bs_nrep, bs_min_samp, ci_lev,
                   reference, sample_equalization=True, keep_shared_events_only=True, 
-                  delete_intermed_data=False):
+                  delete_intermed_data=False, color_by="MODEL"):
     df_aggregated = aggregate_stats(
         df_groups, model_list, date_type, line_type, plot_type, 
         sample_equalization=sample_equalization,
@@ -2548,9 +2618,14 @@ def process_stats(logger, df, df_groups, model_list, metric1_name, metric2_name,
         df_aggregated[str(metric2_name).upper()] = (
             df_aggregated[str(metric2_name).upper()]
         ).astype(float).tolist()
-    df_aggregated = df_aggregated[
-        df_aggregated.index.isin(model_list, level='MODEL')
-    ]
+    if color_by == "LEAD_HOURS":
+        df_aggregated = df_aggregated[
+            df_aggregated.index.isin(flead, level='LEAD_HOURS')
+        ]
+    else:
+        df_aggregated = df_aggregated[
+            df_aggregated.index.isin(model_list, level='MODEL')
+        ]
     return df_aggregated, metric_long_names, units, unit_convert
 
 def process_thresh(logger, df, thresh):
@@ -2577,22 +2652,22 @@ def process_thresh(logger, df, thresh):
             logger.error("Quitting ...")
             raise ValueError(e+"\nQuitting ...")
         df_thresh_symbol, df_thresh_letter = list(
-            zip(*[format_thresh(t) for t in df['FCST_THRESH']])
+            zip(*[format_thresh(t) for t in df['OBS_THRESH']])
         )
-        df['FCST_THRESH_SYMBOL'] = df_thresh_symbol
-        df['FCST_THRESH_VALUE'] = [str(item)[2:] for item in df_thresh_letter]
+        df['OBS_THRESH_SYMBOL'] = df_thresh_symbol
+        df['OBS_THRESH_VALUE'] = [str(item)[2:] for item in df_thresh_letter]
         requested_thresh_value = [
             str(item)[2:] for item in requested_thresh_letter
         ]
-        df = df[df['FCST_THRESH_SYMBOL'].isin(requested_thresh_symbol)]
+        df = df[df['OBS_THRESH_SYMBOL'].isin(requested_thresh_symbol)]
         thresholds_removed = (
             np.array(requested_thresh_symbol)[
-                ~np.isin(requested_thresh_symbol, df['FCST_THRESH_SYMBOL'])
+                ~np.isin(requested_thresh_symbol, df['OBS_THRESH_SYMBOL'])
             ]
         )
         requested_thresh_symbol = (
             np.array(requested_thresh_symbol)[
-                np.isin(requested_thresh_symbol, df['FCST_THRESH_SYMBOL'])
+                np.isin(requested_thresh_symbol, df['OBS_THRESH_SYMBOL'])
             ]
         )
         if thresholds_removed.size > 0:
@@ -2610,27 +2685,65 @@ def process_thresh(logger, df, thresh):
 
 def reindex_pivot_tables(pivot_metric1, pivot_metric2, pivot_counts, 
                          pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2,
-                         pivot_ci_upper2, plot_type, date_hours, metric2_name,
-                         sample_equalization, confidence_intervals):
+                         pivot_ci_upper2, plot_type, date_range, date_hours, 
+                         metric2_name, sample_equalization, 
+                         confidence_intervals, aggregate_dates_by=''):
+    print("THREE!")
+    print(aggregate_dates_by)
     if plot_type == "timeseries":
-        date_hours_incr = np.diff(date_hours)
-        if date_hours_incr.size == 0:
-            min_incr = 24
+        print("FOUR!")
+        print(aggregate_dates_by)
+        if aggregate_dates_by:
+            print("FIVE!")
+            print(aggregate_dates_by)
+            if aggregate_dates_by in ['m','month']:
+                print("SIX!")
+                print(aggregate_dates_by)
+                incr = 1
+                print(date_range)
+                idx = [
+                    item.strftime("%Y%m")
+                    for item in daterange(
+                        date_range[0], date_range[1], relativedelta(months=incr)
+                    )
+                ]
+                print(idx)
+            elif aggregate_dates_by in ['y','year']:
+                print("SEVEN!")
+                incr = 1
+                idx = [
+                    item.strftime("%Y")
+                    for item in daterange(
+                        date_range[0], date_range[1], relativedelta(years=incr)
+                    )
+                ]
+            else:
+                raise ValueError(
+                    f"Unrecognized value for aggregate_dates_by: "
+                    + f"{aggregate_dates_by}"
+                )
         else:
-            min_incr = np.min(date_hours_incr)
-        incrs = [1,6,12,24]
-        incr_idx = np.digitize(min_incr, incrs)
-        if incr_idx < 1:
-            incr_idx = 1
-        incr = incrs[incr_idx-1]
-        idx = [
-            item 
-            for item in daterange(
-                date_range[0].replace(hour=np.min(date_hours)), 
-                date_range[1].replace(hour=np.max(date_hours)), 
-                td(hours=incr)
-            )
-        ]
+            print("EIGHT!")
+            date_hours_incr = np.diff(date_hours)
+            if date_hours_incr.size == 0:
+                min_incr = 24
+            else:
+                min_incr = np.min(date_hours_incr)
+            incrs = [1,6,12,24]
+            incr_idx = np.digitize(min_incr, incrs)
+            if incr_idx < 1:
+                incr_idx = 1
+            incr = incrs[incr_idx-1]
+            idx = [
+                item 
+                for item in daterange(
+                    date_range[0].replace(hour=np.min(date_hours)), 
+                    date_range[1].replace(hour=np.max(date_hours)), 
+                    td(hours=incr)
+                )
+            ]
+        with open('/scratch2/NCEPDEV/ovp/Marcel.Caron/dev/pivot_metric1.pkl','wb') as f:
+            pickle.dump([pivot_metric1, idx], f)
         pivot_metric1 = pivot_metric1.reindex(idx, fill_value=np.nan)
         if sample_equalization:
             pivot_counts = pivot_counts.reindex(idx, fill_value=np.nan)

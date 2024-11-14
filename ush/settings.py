@@ -41,7 +41,8 @@ class Toggle():
             'zoom_logo_right': .65,
             'delete_intermed_data': True, # whether of not to delete DataFrame rows if, for any model, rows include NaN (currently only used in lead_average.py)
             'aggregate_dates_by': 'month', # timeseries only; aggregate stats by 'month', 'year', or not at all ('')
-            'running_mean': '13m', # timeseries only; display a running mean
+            'running_mean': '13', # timeseries only; display a running mean across the given number of time steps
+            'color_by': 'lead', # timeseries only; set to 'model' or 'lead' to use that column to determine which and how many different-colored lines to plot
         }
 
 class Templates():
@@ -253,6 +254,36 @@ class ModelSpecs():
         in the plot.
         '''
         self.model_settings = {
+            'lead1': {'color': '#000000',
+                       'marker': 'o', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead2': {'color': '#fb2020',
+                       'marker': '^', 'markersize': 11,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead3': {'color': '#1e3cff',
+                       'marker': 'X', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead4': {'color': '#00dc00',
+                       'marker': 'P', 'markersize': 11,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead5': {'color': '#e69f00',
+                       'marker': 'o', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead6': {'color': '#56b4e9',
+                       'marker': 'o', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead7': {'color': '#696969',
+                       'marker': 's', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead8': {'color': '#8400c8',
+                       'marker': 'D', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead9': {'color': '#d269c1',
+                       'marker': 's', 'markersize': 10,
+                       'linestyle': 'solid', 'linewidth': 1.8},
+            'lead10': {'color': '#f0e492',
+                        'marker': 'o', 'markersize': 10,
+                        'linestyle': 'solid', 'linewidth': 1.8},
             'model1': {'color': '#000000',
                        'marker': 'o', 'markersize': 10,
                        'linestyle': 'solid', 'linewidth': 1.8},
@@ -439,7 +470,43 @@ class Reference():
                                                 + ' Precipitation'),
                                     'APCP_06': ('Accumulated'
                                                 + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt0.01': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt0.1': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt0.5': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt1': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt5': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt10': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt25': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt50': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_06_ENS_FREQ_gt75': ('Accumulated'
+                                                + ' Precipitation'),
                                     'APCP_24': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt0.01': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt0.1': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt0.5': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt1': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt5': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt10': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt25': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt50': ('Accumulated'
+                                                + ' Precipitation'),
+                                    'APCP_24_ENS_FREQ_gt75': ('Accumulated'
                                                 + ' Precipitation'),
                                     'PWAT': 'Precipitable Water',
                                     'PTYPE': 'Precipitation Type',
@@ -1630,6 +1697,118 @@ class Reference():
                                     'obs_var_names': ['APCP', 'APCP_24', 'APCP_01_Z0'],
                                     'obs_var_levels': ['A24'],
                                     'obs_var_thresholds': '',
+                                    'obs_var_options': '',
+                                    'plot_group':'precip'}
+                    }
+                },
+                'PSTD': {
+                    'plot_stats_list': (
+                        'baser, reliability, resolution, uncertainty, roc_auc, brier, bss, bss_smpl'
+                    ),
+                    'interp': 'NEAREST',
+                    'vx_mask_list' : [
+                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 
+                        'CONUS_South', 'Alaska', 
+                    ],
+                    'var_dict': {
+                        'APCP_06': {'fcst_var_names': [
+                                        'APCP', 'APCP_06', 'APCP_06_ENS_FREQ_gt0.01', 
+                                        'APCP_06_ENS_FREQ_gt0.1',
+                                        'APCP_06_ENS_FREQ_gt0.5',
+                                        'APCP_06_ENS_FREQ_gt1',
+                                        'APCP_06_ENS_FREQ_gt5',
+                                        'APCP_06_ENS_FREQ_gt10',
+                                        'APCP_06_ENS_FREQ_gt25',
+                                        'APCP_06_ENS_FREQ_gt50',
+                                        'APCP_06_ENS_FREQ_gt75',
+                                    ],
+                                    'fcst_var_levels': ['A06','A6'],
+                                    'fcst_var_thresholds': ('==0.10000, >0.01, >0.1,'
+                                                            + ' >0.5,'
+                                                            + ' >1,'
+                                                            + ' >5,'
+                                                            + ' >10,'
+                                                            + ' >25,'
+                                                            + ' >50,'
+                                                            + ' >75,'),
+                                    'fcst_var_options': '',
+                                    'obs_var_names': ['APCP', 'APCP_06', 'APCP_01_Z0'],
+                                    'obs_var_levels': ['A06','A6'],
+                                    'obs_var_thresholds': ('==0.10000, >0.01, >0.1,'
+                                                            + ' >0.5,'
+                                                            + ' >1,'
+                                                            + ' >5,'
+                                                            + ' >10,'
+                                                            + ' >25,'
+                                                            + ' >50,'
+                                                            + ' >75,'),
+                                    'obs_var_options': '',
+                                    'plot_group':'precip'},
+                        'APCP_24': {'fcst_var_names': [
+                                        'APCP', 'APCP_24', 'APCP_24_ENS_FREQ_gt0.01', 
+                                        'APCP_24_ENS_FREQ_gt0.1',
+                                        'APCP_24_ENS_FREQ_gt0.5',
+                                        'APCP_24_ENS_FREQ_gt1',
+                                        'APCP_24_ENS_FREQ_gt5',
+                                        'APCP_24_ENS_FREQ_gt10',
+                                        'APCP_24_ENS_FREQ_gt25',
+                                        'APCP_24_ENS_FREQ_gt50',
+                                        'APCP_24_ENS_FREQ_gt75',
+                                    ],
+                                    'fcst_var_levels': ['A24'],
+                                    'fcst_var_thresholds': ('==0.10000, >-0.001, >0,'
+                                                            + ' >1,'
+                                                            + ' >2,'
+                                                            + ' >5,'
+                                                            + ' >10,'
+                                                            + ' >20,'
+                                                            + ' >25,'
+                                                            + ' >35,'
+                                                            + ' >50,'
+                                                            + ' >75,'),
+                                    'fcst_var_options': '',
+                                    'obs_var_names': ['APCP', 'APCP_24', 'APCP_01_Z0'],
+                                    'obs_var_levels': ['A24'],
+                                    'obs_var_thresholds': ('==0.10000, >-0.001, >0,'
+                                                            + ' >1,'
+                                                            + ' >2,'
+                                                            + ' >5,'
+                                                            + ' >10,'
+                                                            + ' >20,'
+                                                            + ' >25,'
+                                                            + ' >35,'
+                                                            + ' >50,'
+                                                            + ' >75,'),
+                                    'obs_var_options': '',
+                                    'plot_group':'precip'}
+                    }
+                },
+                'ECNT': {
+                    'plot_stats_list': (
+                        'crps, crpss, ign, me, rmse, spread, mae, bias_ratio'
+                    ),
+                    'interp': 'NEAREST',
+                    'vx_mask_list' : [
+                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 
+                        'CONUS_South', 'Alaska', 
+                    ],
+                    'var_dict': {
+                        'APCP_06': {'fcst_var_names': ['APCP', 'APCP_06'],
+                                    'fcst_var_levels': ['A06','A6'],
+                                    'fcst_var_thresholds': (''),
+                                    'fcst_var_options': '',
+                                    'obs_var_names': ['APCP', 'APCP_06', 'APCP_01_Z0'],
+                                    'obs_var_levels': ['A06','A6'],
+                                    'obs_var_thresholds': (''),
+                                    'obs_var_options': '',
+                                    'plot_group':'precip'},
+                        'APCP_24': {'fcst_var_names': ['APCP', 'APCP_24'],
+                                    'fcst_var_levels': ['A24'],
+                                    'fcst_var_thresholds': (''),
+                                    'fcst_var_options': '',
+                                    'obs_var_names': ['APCP', 'APCP_24', 'APCP_01_Z0'],
+                                    'obs_var_levels': ['A24'],
+                                    'obs_var_thresholds': (''),
                                     'obs_var_options': '',
                                     'plot_group':'precip'}
                     }
