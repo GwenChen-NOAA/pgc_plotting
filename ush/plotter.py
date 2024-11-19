@@ -14,6 +14,11 @@ from matplotlib.path import Path
 import numpy as np
 import pandas as pd
 import math
+import os
+import sys
+SETTINGS_DIR = os.environ['USH_DIR']
+sys.path.insert(0, os.path.abspath(SETTINGS_DIR))
+import plot_util
 
 class Plotter():
     def __init__(self, font_weight='bold',  axis_title_weight='bold',  
@@ -207,7 +212,14 @@ class Plotter():
             labels = []
         n_mods = 0
         for l in range(len(flead)):
-            flead_plot_name = flead[l]
+            if flead[l] >= 24 and int(flead[l])%24 in [0, 6, 12, 18]:
+                if int(flead[l])%24 == 0:
+                    use_flead = str(int(flead[l]/24.))
+                else:
+                    use_flead = str(round(flead[l]/24., 2))
+                flead_plot_name = f"Day {use_flead}"
+            else:
+                flead_plot_name = f"F{flead[l]:03d}"
             if flead[l] not in pivot_metric1:
                 continue
             if not model_list:
@@ -380,6 +392,245 @@ class Plotter():
                     ]
             else:
                 labels+=[f'{flead_plot_name}']
+
+        return (fig, y_min, y_max, handles, labels)
+ 
+    def plot_by_metric(self, fig, pivot_metric1, pivot_metric2, pivot_counts,
+                      pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, 
+                      pivot_ci_upper2, y_min, y_max, y_min_limit, y_max_limit, 
+                      x_vals1, x_vals2, metric1_name, metric2_name, flead, 
+                      model_list, model_colors, setting_dicts, 
+                      confidence_intervals=False, y_lim_lock=True,
+                      display_averages=False, running_mean='', target_vals=[0.5]):
+        pivot_interpolated1 = plot_util.get_pivot_table_by_val(pivot_metric1, target_vals)
+        pivot_counts = pivot_interpolated1.copy()
+        pivot_counts[:] = np.nan
+        if confidence_intervals:
+            pivot_ci_lower1 = plot_util.get_pivot_table_by_val(pivot_ci_lower1, target_vals)
+            pivot_ci_upper1 = plot_util.get_pivot_table_by_val(pivot_ci_upper1, target_vals)
+        if metric2_name is not None:
+            pivot_interpolated2 = plot_util.get_pivot_table_by_val(pivot_metric2, target_vals)
+            if confidence_intervals:
+                pivot_ci_lower2 = plot_util.get_pivot_table_by_val(pivot_ci_lower2, target_vals)
+                pivot_ci_upper2 = plot_util.get_pivot_table_by_val(pivot_ci_upper2, target_vals)
+
+        if metric2_name is not None:
+            handles = [
+                self.f('', 'black', line_setting, 5., 0, 'white')
+                for line_setting in ['solid','dashed']
+            ]
+            labels = [
+                str(metric_name).upper()
+                for metric_name in [metric1_name, metric2_name]
+            ]
+        else:
+            handles = []
+            labels = []
+        n_mods = 0
+        val_categories = np.array([
+            [np.power(10.,y), 2.*np.power(10.,y)]
+            for y in [-5,-4,-3,-2,-1,0,1,2,3,4,5]
+        ]).flatten()
+        round_to_nearest_categories = val_categories/20.
+        round_to_nearest = round_to_nearest_categories[
+            np.digitize(
+                np.max(target_vals)-np.min(target_vals), 
+                val_categories[:-1]
+            )
+        ]
+        if round_to_nearest < 1.:
+            val_precision_scale = 100/round_to_nearest
+        else:
+            val_precision_scale = 1.
+        use_vals = [
+            target_val*val_precision_scale for target_val in target_vals
+        ]
+        use_vals = np.divide(use_vals, val_precision_scale)
+        for v in range(len(target_vals)):
+            
+            if metric2_name is not None:
+                val_plot_name = f"={use_vals[v]}"
+            else:
+                val_plot_name = f"{str(metric1_name).upper()}={use_vals[v]}"
+            if target_vals[v] not in pivot_interpolated1:
+                continue
+            if not model_list:
+                model_plot_name = ""
+            elif len(model_list) == 1:
+                if model_list[0] in model_colors.model_alias:
+                    model_plot_name = model_colors.model_alias[
+                        model_list[0]
+                    ]['plot_name']
+                else:
+                    model_plot_name = model_list[0]
+            else:
+                model_plot_name = ""
+                for m in range(len(model_list[:-1])):
+                    if model_list[m] in model_colors.model_alias:
+                        model_plot_name+=(
+                            ', '+model_colors.model_alias[
+                                model_list[m]
+                            ]['plot_name']
+                        )
+                    else:
+                        model_plot_name+=(
+                            ', '+model_list[m]
+                        )
+                if model_list[-1] in model_colors.model_alias:
+                    model_plot_name+=(
+                        ', and '+model_colors.model_alias[
+                            model_list[-1]
+                        ]['plot_name']
+                    )
+                else:
+                    model_plot_name+=(
+                        ', and '+model_list[-1]
+                    )
+            print(pivot_interpolated1)
+            print(target_vals)
+            print(v)
+            y_vals_metric1 = np.array(
+                pivot_interpolated1[target_vals[v]].values.tolist()
+            )
+            y_vals_metric1_mean = np.nanmean(y_vals_metric1)
+            if metric2_name is not None:
+                y_vals_metric2 = np.array(
+                    pivot_interpolated2[target_vals[v]].values.tolist()
+                )
+                y_vals_metric2_mean = np.nanmean(y_vals_metric2)
+            if confidence_intervals:
+                y_vals_ci_lower1 = pivot_ci_lower1[
+                    target_vals[v]
+                ].values.tolist()
+                y_vals_ci_upper1 = pivot_ci_upper1[
+                    target_vals[v]
+                ].values.tolist()
+                if metric2_name is not None:
+                    y_vals_ci_lower2 = pivot_ci_lower2[
+                        target_vals[v]
+                    ].values.tolist()
+                    y_vals_ci_upper2 = pivot_ci_upper2[
+                        target_vals[v]
+                    ].values.tolist()
+            if not y_lim_lock:
+                if metric2_name is not None:
+                    y_vals_both_metrics = np.concatenate((y_vals_metric1, y_vals_metric2))
+                    if np.any(y_vals_both_metrics != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics[y_vals_both_metrics != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_both_metrics)
+                        y_vals_metric_max = np.nanmax(y_vals_both_metrics)
+                else:
+                    if np.any(y_vals_metric1 != np.inf):
+                        y_vals_metric_min = np.nanmin(y_vals_metric1[y_vals_metric1 != np.inf])
+                        y_vals_metric_max = np.nanmax(y_vals_metric1[y_vals_metric1 != np.inf])
+                    else:
+                        y_vals_metric_min = np.nanmin(y_vals_metric1)
+                        y_vals_metric_max = np.nanmax(y_vals_metric1)
+                if n_mods == 0:
+                    y_mod_min = y_vals_metric_min
+                    y_mod_max = y_vals_metric_max
+                    counts = pivot_counts[target_vals[v]].values
+                    n_mods+=1
+                else:
+                    if math.isinf(y_mod_min):
+                        y_mod_min = y_vals_metric_min
+                    else:
+                        y_mod_min = np.nanmin([y_mod_min, y_vals_metric_min])
+                    if math.isinf(y_mod_max):
+                        y_mod_max = y_vals_metric_max
+                    else:
+                        y_mod_max = np.nanmax([y_mod_max, y_vals_metric_max])
+                if (y_vals_metric_min > y_min_limit 
+                        and y_vals_metric_min <= y_mod_min):
+                    y_min = y_vals_metric_min
+                if (y_vals_metric_max < y_max_limit 
+                        and y_vals_metric_max >= y_mod_max):
+                    y_max = y_vals_metric_max
+            print("x and y vals:")
+            print(x_vals1)
+            print(y_vals_metric1)
+            if np.abs(y_vals_metric1_mean) < 1E4:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
+            else:
+                metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
+            plt.plot(
+                x_vals1.tolist(), y_vals_metric1, 
+                marker=setting_dicts[v]['marker'], 
+                c=setting_dicts[v]['color'], mew=2., mec='white', 
+                figure=fig, ms=setting_dicts[v]['markersize'], ls='solid', 
+                lw=setting_dicts[v]['linewidth']
+            )
+            if running_mean:
+                y_vals_rolling1 = pd.Series(y_vals_metric1).rolling(
+                    int(running_mean), center=True, min_periods=1
+                ).mean()
+                plt.plot(
+                    x_vals1.tolist(), y_vals_rolling1.tolist(),
+                    marker=None, c=setting_dicts[v]['color'], figure=fig, 
+                    ms=0., ls='solid', lw=setting_dicts[v]['linewidth'],
+                    alpha=0.5
+                )
+            if metric2_name is not None:
+                if np.abs(y_vals_metric2_mean) < 1E4:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2f}'
+                else:
+                    metric2_mean_fmt_string = f'{y_vals_metric2_mean:.2E}'
+                plt.plot(
+                    x_vals2.tolist(), y_vals_metric2, 
+                    marker=setting_dicts[v]['marker'], 
+                    c=setting_dicts[v]['color'], mew=2., mec='white', 
+                    figure=fig, ms=setting_dicts[v]['markersize'], 
+                    ls='dashed', lw=setting_dicts[v]['linewidth']
+                )
+                if running_mean:
+                    y_vals_rolling2 = pd.Series(y_vals_metric2).rolling(
+                        int(running_mean), center=True, min_periods=1
+                    ).mean()
+                    plt.plot(
+                        x_vals2.tolist(), y_vals_rolling2.tolist(),
+                        marker=None, c=setting_dicts[v]['color'], figure=fig, 
+                        ms=0., ls='dashed', lw=setting_dicts[v]['linewidth'],
+                        alpha=0.5
+                    )
+            if confidence_intervals:
+                plt.errorbar(
+                    x_vals1.tolist(), y_vals_metric1,
+                    yerr=[np.abs(y_vals_ci_lower1), y_vals_ci_upper1],
+                    fmt='none', ecolor=setting_dicts[v]['color'],
+                    elinewidth=setting_dicts[v]['linewidth'],
+                    capsize=10., capthick=setting_dicts[v]['linewidth'],
+                    alpha=.70, zorder=0
+                )
+                if metric2_name is not None:
+                    plt.errorbar(
+                        x_vals2.tolist(), y_vals_metric2,
+                        yerr=[np.abs(y_vals_ci_lower2), y_vals_ci_upper2],
+                        fmt='none', ecolor=setting_dicts[v]['color'],
+                        elinewidth=setting_dicts[v]['linewidth'],
+                        capsize=10., capthick=setting_dicts[v]['linewidth'],
+                        alpha=.70, zorder=0
+                    )
+            handles+=[
+                self.f(
+                    setting_dicts[v]['marker'], setting_dicts[v]['color'],
+                    'solid', setting_dicts[v]['linewidth'], 
+                    setting_dicts[v]['markersize'], 'white'
+                )
+            ]
+            if display_averages:
+                if metric2_name is not None:
+                    labels+=[
+                        f'{val_plot_name} ({metric1_mean_fmt_string},'
+                        + f' {metric2_mean_fmt_string})'
+                    ]
+                else:
+                    labels+=[
+                        f'{val_plot_name} ({metric1_mean_fmt_string})'
+                    ]
+            else:
+                labels+=[f'{val_plot_name}']
 
         return (fig, y_min, y_max, handles, labels)
 

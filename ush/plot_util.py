@@ -15,6 +15,7 @@ from dateutil.relativedelta import relativedelta
 import time
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 import warnings
 import math
 warnings.filterwarnings('ignore')
@@ -1412,7 +1413,7 @@ def configure_dates_axis(x_vals1, incr, aggregate_dates_by):
             for x_val in daterange(x_vals1[0], x_vals1[-1], td(hours=incr))
         ] 
         xtick_labels = [xtick.strftime('%HZ %m/%d') for xtick in xticks]
-    number_of_ticks_dig = np.arange(9, 225, 9, dtype=int)
+    number_of_ticks_dig = np.arange(12, 225, 12, dtype=int)
     show_xtick_every = np.ceil((
         np.digitize(len(xtick_labels), number_of_ticks_dig) + 2
     )/2.)*2
@@ -1421,7 +1422,77 @@ def configure_dates_axis(x_vals1, incr, aggregate_dates_by):
          xtick_labels_with_blanks[int(show_xtick_every)*i] = item
     return xticks, xtick_labels_with_blanks
 
-def configure_stats_axis(y_min, y_max, y_min_limit, y_max_limit, thresh_labels,
+def configure_leads_axis(df, y_min, y_max, y_min_limit, y_max_limit, thresh_labels,
+                         thresh, metric1_name, metric2_name, metric_long_names, 
+                         metrics_using_var_units, units, unit_convert, 
+                         reference, var_long_name_key, variable_translator):
+    # Handle infinite bounds
+    if math.isinf(y_min):
+        y_min = y_min_limit
+    if math.isinf(y_max):
+        y_max = y_max_limit
+
+    # Ensure whole-number ticks
+    ylim_min = math.floor(y_min)
+    ylim_max = math.ceil(y_max)
+
+    # Determine tick spacing
+    y_range = ylim_max - ylim_min
+    if y_range <= 10:
+        tick_spacing = 1
+    elif y_range <= 20:
+        tick_spacing = 2
+    else:
+        tick_spacing = max(5, round(y_range / 10))
+
+    # Generate ticks
+    yticks = np.arange(ylim_min, ylim_max + tick_spacing, tick_spacing)
+
+    # Determine tick labels
+    if ylim_max > 48:  # Use "Day X" labels for leads exceeding 48 hours
+        ytick_labels = [f"{int(tick / 24)}" for tick in yticks]
+        ylabel = "Forecast Day"
+    else:  # Use hour-based labels for smaller lead times
+        ytick_labels = [f"{int(tick)}" for tick in yticks]
+        ylabel = "Forecast Hour"
+
+    # Create blank labels for spacing
+    show_ytick_every = len(yticks) // 10 + 1
+    ytick_labels_with_blanks = ['' for _ in yticks]
+    for i, label in enumerate(ytick_labels[::show_ytick_every]):
+        ytick_labels_with_blanks[show_ytick_every * i] = label
+
+    # Generate labels
+    if str(var_long_name_key).upper() == 'HGT':
+        if str(df['OBS_VAR'].tolist()[0]).upper() in ['CEILING']:
+            var_long_name_key = 'HGTCLDCEIL'
+        elif str(df['OBS_VAR'].tolist()[0]).upper() in ['HPBL']:
+            var_long_name_key = 'HPBL'
+    var_long_name = variable_translator[var_long_name_key]
+    if unit_convert:
+        if thresh and '' not in thresh:
+            thresh_labels = [float(tlab) for tlab in thresh_labels]
+            thresh_labels = reference.unit_conversions[units]['formula'](
+                thresh_labels,
+                rounding=True
+            )
+            thresh_labels = [str(tlab) for tlab in thresh_labels]
+        units = reference.unit_conversions[units]['convert_to']
+    if units == '-':
+        units = ''
+    if metric2_name is not None:
+        metric1_string, metric2_string = metric_long_names
+    else:
+        metric1_string = metric_long_names[0]
+        metric2_string = None
+    
+    return (
+        ylim_min, ylim_max, yticks, ytick_labels_with_blanks, ylabel,
+        thresh_labels, metric1_string, metric2_string, units, 
+        var_long_name_key, var_long_name
+    )
+
+def configure_stats_axis(df, y_min, y_max, y_min_limit, y_max_limit, thresh_labels,
                          thresh, metric1_name, metric2_name, metric_long_names, 
                          metrics_using_var_units, units, unit_convert, 
                          reference, var_long_name_key, variable_translator):
@@ -1837,6 +1908,53 @@ def get_lead_settings(lead_list, lead_colors):
     ]
     return lead_setting_dicts
 
+def get_metric_settings(metric_list, metric_colors):
+    metrics_renamed = []
+    temp_colors = []
+    num=1
+    for requested_metric in metric_list:
+        metrics_renamed.append(f'metric{num}')
+        num+=1
+    metrics_renamed = np.array(metrics_renamed)
+    # Check that there are no repeated colors
+    temp_colors = [
+        metric_colors.get_color_dict(name)['color'] for name in metrics_renamed
+    ]
+    colors_corrected=False
+    loop_count=0
+    while not colors_corrected and loop_count < 10:
+        unique, counts = np.unique(temp_colors, return_counts=True)
+        repeated_colors = [u for i, u in enumerate(unique) if counts[i] > 1]
+        if repeated_colors:
+            for c in repeated_colors:
+                metrics_sharing_colors = metrics_renamed[
+                    np.array(temp_colors)==c
+                ]
+                if np.flatnonzero(np.core.defchararray.find(
+                        metrics_sharing_colors, 'metric')!=-1):
+                    need_to_rename = metrics_sharing_colors[np.flatnonzero(
+                        np.core.defchararray.find(
+                            metrics_sharing_colors, 'metric'
+                        )!=-1)[0]
+                    ]
+                else:
+                    continue
+                metrics_renamed[metrics_renamed==need_to_rename] = (
+                    'metric'+str(count_renamed)
+                )
+                count_renamed+=1
+            temp_colors = [
+                metric_colors.get_color_dict(name)['color'] 
+                for name in metrics_renamed
+            ]
+            loop_count+=1
+        else:
+            colors_corrected = True
+    metric_setting_dicts = [
+        metric_colors.get_color_dict(name) for name in metrics_renamed
+    ]
+    return metric_setting_dicts
+
 def get_level_info(verif_type, level, var_long_name_key, var_savename):
     if str(level).upper() in ['CEILING', 'TOTAL', 'PBL']:
         if str(level).upper() == 'CEILING':
@@ -2054,7 +2172,7 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
                 df_aggregated = df_aggregated.assign(
                     YEAR=pd.to_datetime(df_aggregated.index.get_level_values(
                         str(date_type).upper()
-                    )).dt.strftime('%Y')
+                    )).strftime('%Y')
                 ).set_index('YEAR', append=True)
                 index_colname = 'YEAR'
             else:
@@ -2122,6 +2240,18 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
         pivot_metric1, pivot_metric2, pivot_counts, pivot_ci_lower1, 
         pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2
     )
+
+def get_pivot_table_by_val(pivot_table, target_vals):
+    pivot_interpolated = pd.DataFrame(index=pivot_table.index, columns=target_vals)
+    for date in pivot_table.index:
+        metric_values = pivot_table.loc[date].values
+        col_values = pivot_table.columns.values
+        interpolated_values = interp1d(
+            metric_values[::-1], col_values[::-1], 
+            fill_value="extrapolate", bounds_error=False
+        )(target_vals)
+        pivot_interpolated.loc[date] = interpolated_values
+    return pivot_interpolated
 
 def get_stat_file_base_columns(met_version):
    """! Get the standard MET .stat file columns based on
@@ -2681,6 +2811,10 @@ def process_thresh(logger, df, thresh):
                                   + f" not found and will not be plotted.")
             logger.warning(warning_string)
             logger.warning("Continuing ...")
+    else:
+        opt = None
+        opt_letter = None
+        requested_thresh_value = None
     return df, opt, opt_letter, requested_thresh_value
 
 def reindex_pivot_tables(pivot_metric1, pivot_metric2, pivot_counts, 

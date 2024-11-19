@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --account=ovp
-#SBATCH --job-name=htar_cam
+#SBATCH --job-name=pgc_plotting_hera
 #SBATCH --output=/scratch2/NCEPDEV/ovp/Marcel.Caron/test/out/pgc_plotting.%j.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 #SBATCH --partition=hera
 
 set -x

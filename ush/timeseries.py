@@ -59,9 +59,9 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
                      level: str = '500', flead='all', thresh: list = ['<20'], 
                      metric1_name: str = 'BCRMSE', metric2_name: str = 'BIAS',
                      y_min_limit: float = -10., y_max_limit: float = 10., 
-                     y_lim_lock: bool = False,
-                     xlabel: str = 'Valid Date', date_type: str = 'VALID', 
-                     date_hours: list = [0,6,12,18], verif_type: str = 'pres', 
+                     y_lim_lock: bool = False, date_type: str = 'VALID', 
+                     date_type_string: str = 'VALID', date_hours: list = [0,6,12,18], 
+                     verif_type: str = 'pres', 
                      save_dir: str = '.', restart_dir: str = '.', 
                      requested_var: str = 'HGT', 
                      line_type: str = 'SL1L2', dpi: int = 100, 
@@ -77,7 +77,9 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
                      plot_logo_right: bool = False, path_logo_left: str = '.',
                      path_logo_right: str = '.', zoom_logo_left: float = 1.,
                      zoom_logo_right: float = 1., aggregate_dates_by: str = '',
-                     running_mean: str = '', color_by: str = 'model'):
+                     running_mean: str = '', color_by: str = 'model', 
+                     interp_to_metric: bool = False, 
+                     target_metric_vals: list = [0.5]):
 
     logger.info("========================================")
     logger.info(f"Creating Plot {num} ...")
@@ -271,6 +273,8 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         requested_thresh_labels = [
             requested_thresh_value[i] for i in requested_thresh_argsort
         ]
+    else:
+        thresh_labels = None
     
     print(color_by)
     print(confidence_intervals)
@@ -289,18 +293,35 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             display_averages=display_averages
         )
     elif color_by == 'LEAD_HOURS':
-        # Get plot settings for models
-        lead_setting_dicts = plot_util.get_lead_settings(flead, model_colors)
+        if interp_to_metric:
+            # Get plot settings for metrics
+            metric_setting_dicts = plot_util.get_metric_settings(
+                target_metric_vals, model_colors
+            )
 
-        fig, y_min, y_max, handles, labels = plotter.plot_by_lead(
-            fig, pivot_metric1, pivot_metric2, pivot_counts,
-            pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
-            y_min, y_max, y_min_limit, y_max_limit,
-            x_vals1, x_vals2, metric1_name, metric2_name, 
-            flead, model_list, model_colors, lead_setting_dicts, 
-            confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
-            display_averages=display_averages, running_mean=running_mean
-        )
+            fig, y_min, y_max, handles, labels = plotter.plot_by_metric(
+                fig, pivot_metric1, pivot_metric2, pivot_counts,
+                pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
+                y_min, y_max, y_min_limit, y_max_limit,
+                x_vals1, x_vals2, metric1_name, metric2_name, 
+                flead, model_list, model_colors, metric_setting_dicts, 
+                confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
+                display_averages=display_averages, running_mean=running_mean,
+                target_vals=target_metric_vals
+            )
+        else:
+            # Get plot settings for leads
+            lead_setting_dicts = plot_util.get_lead_settings(flead, model_colors)
+
+            fig, y_min, y_max, handles, labels = plotter.plot_by_lead(
+                fig, pivot_metric1, pivot_metric2, pivot_counts,
+                pivot_ci_lower1, pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2,
+                y_min, y_max, y_min_limit, y_max_limit,
+                x_vals1, x_vals2, metric1_name, metric2_name, 
+                flead, model_list, model_colors, lead_setting_dicts, 
+                confidence_intervals=confidence_intervals, y_lim_lock=y_lim_lock,
+                display_averages=display_averages, running_mean=running_mean
+            )
     else:
         # Get plot settings for models
         mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors, model_settings)
@@ -323,14 +344,27 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         x_vals1, incr, aggregate_dates_by
     )
     xticks, xtick_labels_with_blanks = x_axis_config
+    if aggregate_dates_by in ['m','month']:
+        xlabel=f'{str(date_type_string).capitalize()} Month' 
+    elif aggregate_dates_by in ['Y','year']:
+        xlabel=f'{str(date_type_string).capitalize()} Year' 
+    else:
+        xlabel=f'{str(date_type_string).capitalize()} Date' 
 
     # Configure y-axis
     var_long_name_key = df['FCST_VAR'].tolist()[0]
-    y_axis_config = plot_util.configure_stats_axis(
-        y_min, y_max, y_min_limit, y_max_limit, thresh_labels, thresh, 
-        metric1_name, metric2_name, metric_long_names, metrics_using_var_units,
-        units, unit_convert, reference, var_long_name_key, variable_translator
-    )
+    if interp_to_metric:
+        y_axis_config = plot_util.configure_leads_axis(
+            df, y_min, y_max, y_min_limit, y_max_limit, thresh_labels, thresh, 
+            metric1_name, metric2_name, metric_long_names, metrics_using_var_units,
+            units, unit_convert, reference, var_long_name_key, variable_translator,
+        )
+    else:
+        y_axis_config = plot_util.configure_stats_axis(
+            df, y_min, y_max, y_min_limit, y_max_limit, thresh_labels, thresh, 
+            metric1_name, metric2_name, metric_long_names, metrics_using_var_units,
+            units, unit_convert, reference, var_long_name_key, variable_translator,
+        )
     ylim_min, ylim_max, yticks, ytick_labels_with_blanks, ylabel = y_axis_config[:5]
     thresh_labels, metric1_string, metric2_string, units = y_axis_config[5:9]
     var_long_name_key, var_long_name = y_axis_config[9:]
@@ -371,7 +405,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         linewidth=.5, zorder=0
     )
     
-    # Plot samples
+    # Plot sample sizes
     if sample_equalization:
         counts = pivot_counts.mean(axis=1, skipna=True).fillna('')
         for count, xval in zip(counts, x_vals1.tolist()):
@@ -411,12 +445,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     )
 
     # Set the title
-    if metric2_name is not None:
-        title1 = f'{metric1_string} and {metric2_string}'
-    else:
-        title1 = f'{metric1_string}'
-    if interp_pts and '' not in interp_pts:
-        title1+=f' {interp_pts_string}'
     if thresh and '' not in thresh:
         thresholds_phrase = ', '.join([
             f'{opt}{thresh_label}' for thresh_label in thresh_labels
@@ -426,18 +454,58 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             for thresh_label in requested_thresh_labels
         ]).replace('.','p')
         if units:
-            title2 = (f'{level_string}{var_long_name} ({thresholds_phrase}'
-                      + f' {units}), {domain_string}')
+            if metric2_name is not None:
+                title2 = f'{metric1_string} and {metric2_string} for Threshold {thresholds_phrase} {units}'
+            else:
+                title2 = f'{metric1_string} for Threshold {thresholds_phrase} {units}'
         else:
-            title2 = (f'{level_string}{var_long_name} ({thresholds_phrase}'
-                      + f' unitless), {domain_string}')
+            if metric2_name is not None:
+                title2 = f'{metric1_string} and {metric2_string} for Threshold {thresholds_phrase}'
+            else:
+                title2 = f'{metric1_string} for Threshold {thresholds_phrase}'
     else:
-        if units:
-            title2 = f'{level_string}{var_long_name} ({units}), {domain_string}'
+        if metric2_name is not None:
+            title2 = f'{metric1_string} and {metric2_string}'
         else:
-            title2 = f'{level_string}{var_long_name} (unitless), {domain_string}'
-    title3 = (f'{str(date_type).capitalize()} {date_hours_string} '
-              + f'{date_start_string} to {date_end_string}, {frange_string}')
+            title2 = f'{metric1_string}'
+    if interp_pts and '' not in interp_pts:
+        title2+=f' {interp_pts_string}'
+    if units:
+        if thresh and '' not in thresh:
+            title1 = f'{level_string}{var_long_name} Verification for {domain_string}'
+        else:
+            title1 = f'{level_string}{var_long_name} ({units}) Verification for {domain_string}'
+    else:
+        title1 = f'{level_string}{var_long_name} Verification for {domain_string}'
+    if color_by == "LEAD_HOURS":
+        for mod in model_list:
+            model_names = []
+            if mod in model_colors.model_alias:
+                model_names.append(
+                    model_colors.model_alias[mod]['plot_name']
+                )
+            else:
+                model_names.append(mod)
+        if len(model_list) > 1:
+            models_string = '{} and {}'.format(
+                ", ".join(
+                    [str(model) for model in model_names[:-1]]
+                ), 
+                str(model_names[-1])
+            )
+        else:
+            models_string = str(model_names[0])
+        title1 = f"{models_string} " + title1
+        if aggregate_dates_by in ['month','m']:
+            title3 = (f'Monthly Means')
+        elif aggregate_dates_by in ['year','Y']:
+            title3 = (f'Annual Means')
+        else:
+            title3 = (f'{str(date_type).capitalize()} {date_hours_string} '
+                      + f'{date_start_string} to {date_end_string}')
+    else:
+        title3 = (f'{str(date_type).capitalize()} {date_hours_string} '
+                  + f'{date_start_string} to {date_end_string}, {frange_string}')
     title_center = '\n'.join([title1, title2, title3])
     if sample_equalization:
         title_pad=23
@@ -590,10 +658,14 @@ def main():
         logger.error(e)
         raise ValueError(e)
     
+    interp_to_metric = False 
     if COLOR_BY in ['lead','LEAD']:
         color_by = 'LEAD_HOURS'
     elif COLOR_BY in ['model','MODEL']:
         color_by = 'MODEL'
+    elif COLOR_BY in ['metric', 'METRIC']:
+        color_by = 'LEAD_HOURS'
+        interp_to_metric = True
     else:
         if not COLOR_BY:
             color_by = 'MODEL'
@@ -679,7 +751,7 @@ def main():
         f"Running mean? {'yes' if running_mean else 'no'}"
     )
     logger.debug(
-        f"Coloring lines based on {'lead time.' if color_by=='LEAD_HOURS' else 'model.'}"
+        f"Coloring lines based on {'metric' if interp_to_metric else 'lead time.' if color_by=='LEAD_HOURS' else 'model.'}"
     )
     if CONFIDENCE_INTERVALS:
         logger.debug(f"Confidence Level: {int(ci_lev*100)}%")
@@ -830,9 +902,9 @@ def main():
                     df, logger, date_range, MODELS, num=num, flead=FLEADS, 
                     level=fcst_level, thresh=obs_thresh, 
                     metric1_name=metrics[0], metric2_name=metrics[1], 
-                    date_type=DATE_TYPE, y_min_limit=Y_MIN_LIMIT, 
+                    date_type=DATE_TYPE, date_type_string=date_type_string,
+                    y_min_limit=Y_MIN_LIMIT, 
                     y_max_limit=Y_MAX_LIMIT, y_lim_lock=Y_LIM_LOCK, 
-                    xlabel=f'{str(date_type_string).capitalize()} Date', 
                     verif_type=VERIF_TYPE, date_hours=date_hours, 
                     line_type=LINE_TYPE, save_dir=SAVE_DIR, 
                     restart_dir=RESTART_DIR, eval_period=EVAL_PERIOD, 
@@ -852,6 +924,8 @@ def main():
                     zoom_logo_right=zoom_logo_right,
                     aggregate_dates_by=aggregate_dates_by,
                     running_mean=running_mean, color_by=color_by,
+                    interp_to_metric=interp_to_metric, 
+                    target_metric_vals=target_metric_vals
                 )
                 num+=1
 
@@ -952,6 +1026,9 @@ if __name__ == "__main__":
 
     # Which column to use to determine which and how many different-colored lines to plot
     COLOR_BY = toggle.plot_settings['color_by']
+
+    # Which values to use when plotting lines based on metric value
+    target_metric_vals = toggle.plot_settings['target_metric_vals']
 
     # Whether or not to clear the intermediate directory that stores pruned data
     clear_prune_dir = toggle.plot_settings['clear_prune_directory']

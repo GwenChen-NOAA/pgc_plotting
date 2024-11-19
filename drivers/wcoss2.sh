@@ -1,5 +1,5 @@
 #PBS -S /bin/bash
-#PBS -N pgc_precip_timeseries
+#PBS -N pgc_precip_wcoss2
 #PBS -j oe
 #PBS -S /bin/bash
 #PBS -q dev
