@@ -309,9 +309,6 @@ class Plotter():
                 if (y_vals_metric_max < y_max_limit 
                         and y_vals_metric_max >= y_mod_max):
                     y_max = y_vals_metric_max
-            print("x and y vals:")
-            print(x_vals1)
-            print(y_vals_metric1)
             if np.abs(y_vals_metric1_mean) < 1E4:
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
             else:
@@ -486,9 +483,6 @@ class Plotter():
                     model_plot_name+=(
                         ', and '+model_list[-1]
                     )
-            print(pivot_interpolated1)
-            print(target_vals)
-            print(v)
             y_vals_metric1 = np.array(
                 pivot_interpolated1[target_vals[v]].values.tolist()
             )
@@ -548,9 +542,6 @@ class Plotter():
                 if (y_vals_metric_max < y_max_limit 
                         and y_vals_metric_max >= y_mod_max):
                     y_max = y_vals_metric_max
-            print("x and y vals:")
-            print(x_vals1)
-            print(y_vals_metric1)
             if np.abs(y_vals_metric1_mean) < 1E4:
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
             else:

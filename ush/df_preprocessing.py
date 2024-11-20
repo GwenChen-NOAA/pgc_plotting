@@ -4,7 +4,6 @@
 # Name:          df_preprocessing.py
 # Contact(s):    Marcel Caron
 # Developed:     Dec. 2, 2021 by Marcel Caron
-# Last Modified: Apr. 22, 2022 by Marcel Caron
 # Abstract:      Collection of functions that initialize and filter dataframes
 #
 ###############################################################################

@@ -4,7 +4,6 @@
 # Name:          time_series.py
 # Contact(s):    Marcel Caron
 # Developed:     Oct. 14, 2021 by Marcel Caron 
-# Last Modified: Dec. 01, 2022 by Marcel Caron             
 # Title:         Line plot of verification metric as a function of 
 #                valid or init time
 # Abstract:      Plots METplus output (e.g., BCRMSE) as a line plot, 
@@ -94,7 +93,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     domain_translator = reference.domain_translator
     model_settings = model_colors.model_settings
 
-    print(f"aggregate_dates_by 5: {aggregate_dates_by}")
     # filter by level
     df = df[df['FCST_LEV'].astype(str).eq(str(level))]
 
@@ -121,7 +119,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         plt.close(num)
         logger.info("========================================")
         return None
-    print(f"aggregate_dates_by 4: {aggregate_dates_by}")
 
     # Filter by interpolation width
     df, interp_pts_string, interp_pts_save_string = plot_util.filter_by_width(
@@ -135,7 +132,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
 
     # Remove from model_list the models that don't exist in the dataframe
     df, model_list = plot_util.process_models(logger, df, model_list)
-    print(f"aggregate_dates_by 3: {aggregate_dates_by}")
 
     if df.empty:
         logger.warning(f"Empty Dataframe. Continuing onto next plot...")
@@ -159,7 +155,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             logger.info("========================================")
             return None
 
-    print(f"aggregate_dates_by 2: {aggregate_dates_by}")
     # Aggregate unit statistics and calculate metrics
     df_groups = df.groupby(group_by)
     metrics_using_var_units = [
@@ -177,20 +172,14 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     )
     
     # Make pivot tables for plotting
-    print(f"aggregate_dates_by 1: {aggregate_dates_by}")
-    print("ONE!!")
     pivot_tables = plot_util.get_pivot_tables(
         df_aggregated, metric1_name, metric2_name, sample_equalization, 
         keep_shared_events_only, date_type, confidence_intervals, 
         'timeseries', aggregate_dates_by=aggregate_dates_by, colname=color_by
     )
-    print(f"aggregate_dates_by 0: {aggregate_dates_by}")
-    print("TWO!!")
     pivot_metric1, pivot_metric2, pivot_counts = pivot_tables[:3]
     pivot_ci_lower1, pivot_ci_upper1 = pivot_tables[3:5]
     pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[5:]
-    print(pivot_metric1)
-    print(f"aggregate_dates_by -1: {aggregate_dates_by}")
 
     # Reindex pivot table with full list of dates, introducing NaNs 
     pivot_tables, incr = plot_util.reindex_pivot_tables(
@@ -202,7 +191,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     pivot_metric1, pivot_metric2, pivot_counts = pivot_tables[:3]
     pivot_ci_lower1, pivot_ci_upper1 = pivot_tables[3:5]
     pivot_ci_lower2, pivot_ci_upper2 = pivot_tables[5:]
-    print(pivot_metric1)
     if (metric2_name and (pivot_metric1.empty or pivot_metric2.empty)):
         print_varname = df['FCST_VAR'].tolist()[0]
         logger.warning(
@@ -276,9 +264,6 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     else:
         thresh_labels = None
     
-    print(color_by)
-    print(confidence_intervals)
-    print(pivot_metric1)
     if color_by == 'MODEL':
         # Get plot settings for models
         mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors, model_settings)
@@ -1019,7 +1004,6 @@ if __name__ == "__main__":
 
     # Interval at which dates are aggregated, empty for no aggregation
     aggregate_dates_by = toggle.plot_settings['aggregate_dates_by']
-    print(f"aggregate_dates_by 10: {aggregate_dates_by}")
 
     # Whether or not to display running means, averaged across given period
     running_mean = toggle.plot_settings['running_mean']

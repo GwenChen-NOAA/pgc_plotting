@@ -2184,9 +2184,6 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
             index_colname = str(date_type).upper()
     elif plot_type == 'fhrmean':
         index_colname = 'LEAD_HOURS'
-    print(index_colname)
-    print(df_aggregated)
-    print(df_aggregated[str(metric1_name).upper()])
     pivot_metric1 = pd.pivot_table(
         df_aggregated, values=str(metric1_name).upper(), columns=colname, 
         index=index_colname, aggfunc=np.nanmean
@@ -2235,7 +2232,6 @@ def get_pivot_tables(df_aggregated, metric1_name, metric2_name,
         pivot_ci_upper1 = None
         pivot_ci_lower2 = None
         pivot_ci_upper2 = None
-    print(f"aggregate_dates_by A: {aggregate_dates_by}")
     return (
         pivot_metric1, pivot_metric2, pivot_counts, pivot_ci_lower1, 
         pivot_ci_upper1, pivot_ci_lower2, pivot_ci_upper2
@@ -2822,28 +2818,17 @@ def reindex_pivot_tables(pivot_metric1, pivot_metric2, pivot_counts,
                          pivot_ci_upper2, plot_type, date_range, date_hours, 
                          metric2_name, sample_equalization, 
                          confidence_intervals, aggregate_dates_by=''):
-    print("THREE!")
-    print(aggregate_dates_by)
     if plot_type == "timeseries":
-        print("FOUR!")
-        print(aggregate_dates_by)
         if aggregate_dates_by:
-            print("FIVE!")
-            print(aggregate_dates_by)
             if aggregate_dates_by in ['m','month']:
-                print("SIX!")
-                print(aggregate_dates_by)
                 incr = 1
-                print(date_range)
                 idx = [
                     item.strftime("%Y%m")
                     for item in daterange(
                         date_range[0], date_range[1], relativedelta(months=incr)
                     )
                 ]
-                print(idx)
             elif aggregate_dates_by in ['y','year']:
-                print("SEVEN!")
                 incr = 1
                 idx = [
                     item.strftime("%Y")
@@ -2857,7 +2842,6 @@ def reindex_pivot_tables(pivot_metric1, pivot_metric2, pivot_counts,
                     + f"{aggregate_dates_by}"
                 )
         else:
-            print("EIGHT!")
             date_hours_incr = np.diff(date_hours)
             if date_hours_incr.size == 0:
                 min_incr = 24
