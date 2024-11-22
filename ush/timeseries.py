@@ -216,8 +216,10 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         logger.info("========================================")
         return None
     
-    # Plot data
+    # Begin plotting process
     logger.info("Begin plotting ...")
+
+    # Handle confidence intervals if they're enabled
     if confidence_intervals:
         indices_in_common1 = list(set.intersection(*map(
             set, 
@@ -244,13 +246,19 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             pivot_metric2 = pivot_metric2[pivot_metric2.index.isin(indices_in_common2)]
             pivot_ci_lower2 = pivot_ci_lower2[pivot_ci_lower2.index.isin(indices_in_common2)]
             pivot_ci_upper2 = pivot_ci_upper2[pivot_ci_upper2.index.isin(indices_in_common2)]
+    
+    # Set the x-values (index of the pivot tables)
     x_vals1 = pivot_metric1.index
     if metric2_name is not None:
         x_vals2 = pivot_metric2.index
     else:
         x_vals2 = None
+
+    # Set the y-axis limits, starting from predefined limits
     y_min = y_min_limit
     y_max = y_max_limit
+
+    # Handle threshold values if they're defined
     if thresh and '' not in thresh:
         thresh_labels = np.unique(df['OBS_THRESH_VALUE'])
         thresh_argsort = np.argsort(thresh_labels.astype(float))
@@ -264,6 +272,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     else:
         thresh_labels = None
     
+    # Determine the plotting behavior based on 'color_by'
     if color_by == 'MODEL':
         # Get plot settings for models
         mod_setting_dicts = plot_util.get_model_settings(model_list, model_colors, model_settings)
@@ -482,9 +491,21 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
             models_string = str(model_names[0])
         title1 = f"{models_string} " + title1
         if aggregate_dates_by in ['month','m']:
-            title3 = (f'Monthly Means')
+            if running_mean:
+                title3 = (
+                    f'Monthly Means (Thick Line: {int(running_mean)}-Month '
+                    + f'Running Mean)'
+                )
+            else:
+                title3 = (f'Monthly Means')
         elif aggregate_dates_by in ['year','Y']:
-            title3 = (f'Annual Means')
+            if running_mean:
+                title3 = (
+                    f'Annual Means (Thick Line: {int(running_mean)}-Year '
+                    + f'Running Mean)'
+                )
+            else:
+                title3 = (f'Annual Means')
         else:
             title3 = (f'{str(date_type).capitalize()} {date_hours_string} '
                       + f'{date_start_string} to {date_end_string}')

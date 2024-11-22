@@ -29,7 +29,7 @@ class Plotter():
                 xtick_label_size=16,        xtick_major_pad=10,        
                 ytick_label_size=16,        ytick_major_pad=10, 
                 fig_subplot_right=.95,      fig_subplot_left=.1,      
-                fig_subplot_top=.87,        fig_subplot_bottom=.27,
+                fig_subplot_top=.87,        fig_subplot_bottom=.2,
                 legend_handle_text_pad=.4,  legend_handle_length=3., 
                 legend_border_axis_pad=.5,  legend_col_space=3.,
                 legend_frame_on=True,       fig_size=(16.,8.),        
@@ -313,22 +313,24 @@ class Plotter():
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
             else:
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
+            if running_mean:
+                alpha=.25
+            else:
+                alpha=1.0
             plt.plot(
                 x_vals1.tolist(), y_vals_metric1, 
                 marker=setting_dicts[l]['marker'], 
                 c=setting_dicts[l]['color'], mew=2., mec='white', 
                 figure=fig, ms=setting_dicts[l]['markersize'], ls='solid', 
-                lw=setting_dicts[l]['linewidth']
+                lw=setting_dicts[l]['linewidth'],alpha=alpha
             )
             if running_mean:
-                y_vals_rolling1 = pd.Series(y_vals_metric1).rolling(
-                    int(running_mean), center=True, min_periods=1
-                ).mean()
+                y_vals_rolling1 = plot_util.get_rolling_mean(y_vals_metric1, running_mean)
                 plt.plot(
                     x_vals1.tolist(), y_vals_rolling1.tolist(),
                     marker=None, c=setting_dicts[l]['color'], figure=fig, 
-                    ms=0., ls='solid', lw=setting_dicts[l]['linewidth'],
-                    alpha=0.5
+                    ms=0., ls='solid', lw=setting_dicts[l]['linewidth']*2,
+                    alpha=1.0
                 )
             if metric2_name is not None:
                 if np.abs(y_vals_metric2_mean) < 1E4:
@@ -340,17 +342,15 @@ class Plotter():
                     marker=setting_dicts[l]['marker'], 
                     c=setting_dicts[l]['color'], mew=2., mec='white', 
                     figure=fig, ms=setting_dicts[l]['markersize'], 
-                    ls='dashed', lw=setting_dicts[l]['linewidth']
+                    ls='dashed', lw=setting_dicts[l]['linewidth'], alpha=alpha
                 )
                 if running_mean:
-                    y_vals_rolling2 = pd.Series(y_vals_metric2).rolling(
-                        int(running_mean), center=True, min_periods=1
-                    ).mean()
+                    y_vals_rolling2 = plot_util.get_rolling_mean(y_vals_metric2, running_mean)
                     plt.plot(
                         x_vals2.tolist(), y_vals_rolling2.tolist(),
                         marker=None, c=setting_dicts[l]['color'], figure=fig, 
-                        ms=0., ls='dashed', lw=setting_dicts[l]['linewidth'],
-                        alpha=0.5
+                        ms=0., ls='dashed', lw=setting_dicts[l]['linewidth']*2,
+                        alpha=1.0
                     )
             if confidence_intervals:
                 plt.errorbar(
@@ -359,7 +359,7 @@ class Plotter():
                     fmt='none', ecolor=setting_dicts[l]['color'],
                     elinewidth=setting_dicts[l]['linewidth'],
                     capsize=10., capthick=setting_dicts[l]['linewidth'],
-                    alpha=.70, zorder=0
+                    alpha=alpha*.70, zorder=0
                 )
                 if metric2_name is not None:
                     plt.errorbar(
@@ -368,7 +368,7 @@ class Plotter():
                         fmt='none', ecolor=setting_dicts[l]['color'],
                         elinewidth=setting_dicts[l]['linewidth'],
                         capsize=10., capthick=setting_dicts[l]['linewidth'],
-                        alpha=.70, zorder=0
+                        alpha=alpha*.70, zorder=0
                     )
             handles+=[
                 self.f(
@@ -546,22 +546,24 @@ class Plotter():
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2f}'
             else:
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
+            if running_mean:
+                alpha=.25
+            else:
+                alpha=1.0
             plt.plot(
                 x_vals1.tolist(), y_vals_metric1, 
                 marker=setting_dicts[v]['marker'], 
                 c=setting_dicts[v]['color'], mew=2., mec='white', 
                 figure=fig, ms=setting_dicts[v]['markersize'], ls='solid', 
-                lw=setting_dicts[v]['linewidth']
+                lw=setting_dicts[v]['linewidth'], alpha=alpha
             )
             if running_mean:
-                y_vals_rolling1 = pd.Series(y_vals_metric1).rolling(
-                    int(running_mean), center=True, min_periods=1
-                ).mean()
+                y_vals_rolling1 = plot_util.get_rolling_mean(y_vals_metric1, running_mean)
                 plt.plot(
                     x_vals1.tolist(), y_vals_rolling1.tolist(),
                     marker=None, c=setting_dicts[v]['color'], figure=fig, 
-                    ms=0., ls='solid', lw=setting_dicts[v]['linewidth'],
-                    alpha=0.5
+                    ms=0., ls='solid', lw=setting_dicts[v]['linewidth']*2,
+                    alpha=1.0
                 )
             if metric2_name is not None:
                 if np.abs(y_vals_metric2_mean) < 1E4:
@@ -573,17 +575,17 @@ class Plotter():
                     marker=setting_dicts[v]['marker'], 
                     c=setting_dicts[v]['color'], mew=2., mec='white', 
                     figure=fig, ms=setting_dicts[v]['markersize'], 
-                    ls='dashed', lw=setting_dicts[v]['linewidth']
+                    ls='dashed', lw=setting_dicts[v]['linewidth'], alpha=alpha
                 )
                 if running_mean:
-                    y_vals_rolling2 = pd.Series(y_vals_metric2).rolling(
-                        int(running_mean), center=True, min_periods=1
-                    ).mean()
+                    y_vals_rolling2 = plot_util.get_rolling_mean(
+                        y_vals_metric2, running_mean
+                    )
                     plt.plot(
                         x_vals2.tolist(), y_vals_rolling2.tolist(),
                         marker=None, c=setting_dicts[v]['color'], figure=fig, 
                         ms=0., ls='dashed', lw=setting_dicts[v]['linewidth'],
-                        alpha=0.5
+                        alpha=1.0
                     )
             if confidence_intervals:
                 plt.errorbar(
@@ -592,7 +594,7 @@ class Plotter():
                     fmt='none', ecolor=setting_dicts[v]['color'],
                     elinewidth=setting_dicts[v]['linewidth'],
                     capsize=10., capthick=setting_dicts[v]['linewidth'],
-                    alpha=.70, zorder=0
+                    alpha=.70*alpha, zorder=0
                 )
                 if metric2_name is not None:
                     plt.errorbar(
@@ -601,7 +603,7 @@ class Plotter():
                         fmt='none', ecolor=setting_dicts[v]['color'],
                         elinewidth=setting_dicts[v]['linewidth'],
                         capsize=10., capthick=setting_dicts[v]['linewidth'],
-                        alpha=.70, zorder=0
+                        alpha=.70*alpha, zorder=0
                     )
             handles+=[
                 self.f(

@@ -198,6 +198,20 @@ class Presets():
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
                 ).strftime('%Y%m%d')
             },
+            'last7years': {
+                'valid_beg': (
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=7)
+                ).strftime('%Y%m%d'),
+                'valid_end': (
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')
+                ).strftime('%Y%m%d'),
+                'init_beg': (
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=7)
+                    ).strftime('%Y%m%d'),
+                'init_end': (
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')
+                ).strftime('%Y%m%d')
+            },
             '2020s': {
                 'valid_beg': '20200101',
                 'valid_end': '20291231',
