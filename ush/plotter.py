@@ -315,14 +315,16 @@ class Plotter():
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
             if running_mean:
                 alpha=.25
+                show_markers=0
             else:
                 alpha=1.0
+                show_markers=1
             plt.plot(
                 x_vals1.tolist(), y_vals_metric1, 
                 marker=setting_dicts[l]['marker'], 
                 c=setting_dicts[l]['color'], mew=2., mec='white', 
-                figure=fig, ms=setting_dicts[l]['markersize'], ls='solid', 
-                lw=setting_dicts[l]['linewidth'],alpha=alpha
+                figure=fig, ms=setting_dicts[l]['markersize']*float(show_markers), 
+                ls='solid', lw=setting_dicts[l]['linewidth'],alpha=alpha
             )
             if running_mean:
                 y_vals_rolling1 = plot_util.get_rolling_mean(y_vals_metric1, running_mean)
@@ -341,7 +343,7 @@ class Plotter():
                     x_vals2.tolist(), y_vals_metric2, 
                     marker=setting_dicts[l]['marker'], 
                     c=setting_dicts[l]['color'], mew=2., mec='white', 
-                    figure=fig, ms=setting_dicts[l]['markersize'], 
+                    figure=fig, ms=setting_dicts[l]['markersize']*float(show_markers), 
                     ls='dashed', lw=setting_dicts[l]['linewidth'], alpha=alpha
                 )
                 if running_mean:
@@ -548,14 +550,16 @@ class Plotter():
                 metric1_mean_fmt_string = f'{y_vals_metric1_mean:.2E}'
             if running_mean:
                 alpha=.25
+                show_markers=0
             else:
                 alpha=1.0
+                show_markers=1
             plt.plot(
                 x_vals1.tolist(), y_vals_metric1, 
                 marker=setting_dicts[v]['marker'], 
                 c=setting_dicts[v]['color'], mew=2., mec='white', 
-                figure=fig, ms=setting_dicts[v]['markersize'], ls='solid', 
-                lw=setting_dicts[v]['linewidth'], alpha=alpha
+                figure=fig, ms=setting_dicts[v]['markersize']*float(show_markers), 
+                ls='solid', lw=setting_dicts[v]['linewidth'], alpha=alpha
             )
             if running_mean:
                 y_vals_rolling1 = plot_util.get_rolling_mean(y_vals_metric1, running_mean)
@@ -574,7 +578,7 @@ class Plotter():
                     x_vals2.tolist(), y_vals_metric2, 
                     marker=setting_dicts[v]['marker'], 
                     c=setting_dicts[v]['color'], mew=2., mec='white', 
-                    figure=fig, ms=setting_dicts[v]['markersize'], 
+                    figure=fig, ms=setting_dicts[v]['markersize']*float(show_markers), 
                     ls='dashed', lw=setting_dicts[v]['linewidth'], alpha=alpha
                 )
                 if running_mean:

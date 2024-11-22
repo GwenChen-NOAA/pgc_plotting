@@ -1740,7 +1740,7 @@ def configure_stats_axis(df, y_min, y_max, y_min_limit, y_max_limit, thresh_labe
         var_long_name_key, var_long_name
     )
 
-def daterange(start: datetime, end: datetime, td: td) -> datetime:
+def daterange(start: datetime, end: datetime, delta: td) -> datetime:
     """
     Generates a range of datetime objects from start to end, incrementing
     by the specified timedelta
@@ -1748,19 +1748,17 @@ def daterange(start: datetime, end: datetime, td: td) -> datetime:
     Parameters:
     start (datetime): The starting datetime
     end (datetime): The ending datetime (inclusive)
-    td (timedelta): The time increment
+    delta (timedelta): The time increment
 
     Yields:
-    datetime: The next datetime in the range, incremented by td
+    datetime: The next datetime in the range, incremented by delta
     """
     if not isinstance(start, datetime) or not isinstance(end, datetime):
         raise TypeError("Start and end must be datetime objects.")
-    if td <= td(seconds=0):
-        raise ValueError("Time delta must be positive.")
     curr = start
     while curr <= end:
         yield curr
-        curr+=td
+        curr+=delta
 
 def equalize_samples(logger, df, group_by, color_by='MODEL'):
     """

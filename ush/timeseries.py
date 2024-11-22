@@ -72,6 +72,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
                      keep_shared_events_only: bool = False,
                      plot_group: str = 'sfc_upper',
                      sample_equalization: bool = True,
+                     show_sample_sizes: bool = True,
                      plot_logo_left: bool = False,
                      plot_logo_right: bool = False, path_logo_left: str = '.',
                      path_logo_right: str = '.', zoom_logo_left: float = 1.,
@@ -400,7 +401,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
     )
     
     # Plot sample sizes
-    if sample_equalization:
+    if sample_equalization and show_sample_sizes:
         counts = pivot_counts.mean(axis=1, skipna=True).fillna('')
         for count, xval in zip(counts, x_vals1.tolist()):
             if not isinstance(count, str):
@@ -513,7 +514,7 @@ def plot_time_series(df: pd.DataFrame, logger: logging.Logger,
         title3 = (f'{str(date_type).capitalize()} {date_hours_string} '
                   + f'{date_start_string} to {date_end_string}, {frange_string}')
     title_center = '\n'.join([title1, title2, title3])
-    if sample_equalization:
+    if sample_equalization and show_sample_sizes:
         title_pad=23
     else:
         title_pad=None
@@ -922,6 +923,7 @@ def main():
                     bs_nrep=bs_nrep, bs_method=bs_method, ci_lev=ci_lev,
                     bs_min_samp=bs_min_samp,
                     sample_equalization=sample_equalization,
+                    show_sample_sizes=show_sample_sizes,
                     plot_logo_left=plot_logo_left,
                     plot_logo_right=plot_logo_right,
                     path_logo_left=path_logo_left,
@@ -1016,6 +1018,9 @@ if __name__ == "__main__":
     # samples used to aggregate each statistic if the samples are not shared
     # by all models.  Required to display sample sizes
     sample_equalization = toggle.plot_settings['sample_equalization']
+
+    # Whether or not to show sample sizes (if True, only show if sample_equalization is also True)
+    show_sample_sizes = toggle.plot_settings['show_sample_sizes']
 
     # Whether or not to display average values beside legend labels
     display_averages = toggle.plot_settings['display_averages']

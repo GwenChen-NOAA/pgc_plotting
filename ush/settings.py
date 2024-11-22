@@ -33,6 +33,7 @@ class Toggle():
             'display_averages': False, # display mean statistic for each model, averaged across the dimension of the independent variable
             'include_all_requested_thresholds': True, # functional for threshold_average only; label x-axis with all requested thresholds rather than only plotted thresholds
             'sample_equalization': True, # equalize samples along each value of the independent variable where data exist
+            'show_sample_sizes': False, # whether or not to show sample sizes on plots. Ignored if sample_equalization is False.
             'keep_shared_events_only': False, # functional for time_series only.
             'clear_prune_directory': False, # remove the intermediate directory created to store pruned data files temporarily
             'plot_logo_left': True,
@@ -415,8 +416,8 @@ class Reference():
         '''
         self.unit_conversions = {
             'kg/m^2': {
-                'convert_to': 'in',
-                'formula': self.formulas.mm_to_in
+                'convert_to': 'mm',
+                'formula': self.formulas.mm_to_mm
             },
             'K': {
                 'convert_to': 'F',
@@ -2679,6 +2680,17 @@ class Reference():
                 else:
                     inch_vals = np.divide(mm_vals, 25.4)
                 return inch_vals
+        def mm_to_mm(mm_vals, rounding=False, return_terms=False):
+            if return_terms:
+                M = 1.
+                C = 0.
+                return M, C
+            else:
+                if rounding:
+                    mm_vals = np.divide(mm_vals, 1.).round(decimals=2)
+                else:
+                    mm_vals = np.divide(mm_vals, 1.)
+                return mm_vals
         def K_to_F(K_vals, rounding=False, return_terms=False):
             if return_terms:
                 M = np.divide(9., 5.)
