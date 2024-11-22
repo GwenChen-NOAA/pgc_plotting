@@ -43,18 +43,18 @@ The Precipitation Grand Challenge (PGC) is a goal to provide more accurate, reli
 ## Features
 
 The plotting core of this code is a set of Python scripts designed to generate and customize the PGC plots. Features of these scripts include:
-1. Plot Generation 
+1. **Plot Generation**
 - Creates PGC plots using a METplus statistics archive
 - Formats plot aspects automatically, like color schemes, axis scaling
-2. Customization and Flexibility
+2. **Customization and Flexibility**
 - Supports optional customization of plot styles and parameters, such as line colors, unit conversion, and confidence intervals
 - Allows users to modify all parts of the verification configuration, including evaluation period, models, field, and metric
 - Users can easily create new verification jobs
-3. Robustness and Integration
+3. **Robustness and Integration**
 - Tested and flexible across a variety of edge cases and error cases
 - Standalone plotting that can be easily attached to larger verification workflows
 - Supports job scheduling 
-4. Compatibility and Accessibility
+4. **Compatibility and Accessibility**
 - Works on two different NOAA machines (Hera and WCOSS2)
 - Minimal dependencies
 - Open-source and hosted on Github, making it easy to review, modify, or extend functionality
@@ -72,15 +72,18 @@ To use the plotting scripts on either Hera or WCOSS2, follow these steps:
    cd pgc_plotting
    ```
 2. **Ensure Machine Compatibility**
+
    The repository is designed to work on the following NOAA supercomputers:
    - Hera (uses the SLURM job scheduler)
    - WCOSS2 (uses the PBS job scheduler)
-3. Environment Setup
+3. **Environment Setup**
+
    The repository includes preconfigured environment setup files for each machine:
    - `hera.env` for Hera
    - `wcoss2.env` for WCOSS2
    These files will automatically load the necessary modules when the corresponding driver script is run (e.g., `source hera.env` or `source wcoss2.env`).
-4. Required Dependencies
+4. **Required Dependencies**
+
    The scripts rely on standard NOAA computing environments. All required modules are automatically loaded via the provided `.env` files--no additional installation is needed.
 
 That's it! You're ready to start submitting plotting jobs.  For usage instructions, refer to the **Usage** section below.
@@ -121,7 +124,7 @@ These files define environment variables for evaluation periods, metrics, and ot
 ## Usage
 
 ### 1. Modify Configuration Files
-Configuration files in `parm/` define how the plot should be generated.  For example, to change the evaluation period or the metric for a plot, edit the relevent `.config` file (e.g., `apcp24_bss_10mm_timeseries.config`).
+Configuration files in `parm/` define how the plot should be generated.  For example, to change the evaluation period, edit the `EVAL_PERIOD` variable in the relevant `.config` file (e.g., `apcp24_bss_10mm_timeseries.config`). You may also add new config files (e.g., `[field]_[metric]_timeseries.config`).
 ### 2. Submit a Job
 Once the installation is complete, submit a plotting job using the respective driver script, passing the necessary parameters:
 - For **Hera** (SLURM):
