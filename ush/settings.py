@@ -678,6 +678,10 @@ class Reference():
                                       'long_name': 'North America',
                                       'save_name': 'NAMR',
                                   },
+                                  'NHEM': {
+                                      'long_name': 'Northern Hemisphere',
+                                      'save_name': 'nhem',
+                                  },
                                   'NHM': {
                                       'long_name': 'Northern Hemisphere',
                                       'save_name': 'NHM',
@@ -686,9 +690,17 @@ class Reference():
                                       'long_name': 'North Pacific Ocean',
                                       'save_name': 'NPCF',
                                   },
+                                  'SHEM': {
+                                      'long_name': 'Southern Hemisphere',
+                                      'save_name': 'shem',
+                                  },
                                   'SHM': {
                                       'long_name': 'Southern Hemisphere',
                                       'save_name': 'SHM',
+                                  },
+                                  'TROPICS': {
+                                      'long_name': 'Tropics',
+                                      'save_name': 'tropics',
                                   },
                                   'TRP': {
                                       'long_name': 'TRP',
@@ -1123,7 +1135,7 @@ class Reference():
                                         + ' oabar'),
                     'interp': 'NEAREST',
                     'vx_mask_list' : [
-                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
+                        'NHEM', 'SHEM', 'TROPICS', 'G003', 'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
                         'Appalachia', 'CPlains', 'DeepSouth', 'GreatBasin', 'GreatLakes', 
                         'Mezquital', 'MidAtlantic', 'NorthAtlantic', 'NPlains', 'NRockies',
                         'PacificNW', 'PacificSW', 'Prairie', 'Southeast', 'Southwest', 'SPlains', 'SRockies',
@@ -1283,7 +1295,7 @@ class Reference():
                                         + ' oabar'),
                     'interp': 'NEAREST',
                     'vx_mask_list' : [
-                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
+                        'NHEM', 'SHEM', 'TROPICS', 'G003', 'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
                         'Appalachia', 'CPlains', 'DeepSouth', 'GreatBasin', 'GreatLakes', 
                         'Mezquital', 'MidAtlantic', 'NorthAtlantic', 'NPlains', 'NRockies',
                         'PacificNW', 'PacificSW', 'Prairie', 'Southeast', 'Southwest', 'SPlains', 'SRockies',
@@ -1333,7 +1345,7 @@ class Reference():
                                         + ' obar'),
                     'interp': 'NEAREST, BILIN',
                     'vx_mask_list' : [
-                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
+                        'NHEM', 'SHEM', 'TROPICS', 'G003', 'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
                         'Appalachia', 'CPlains', 'DeepSouth', 'GreatBasin', 'GreatLakes', 
                         'Mezquital', 'MidAtlantic', 'NorthAtlantic', 'NPlains', 'NRockies',
                         'PacificNW', 'PacificSW', 'Prairie', 'Southeast', 'Southwest', 'SPlains', 'SRockies',
@@ -1520,7 +1532,7 @@ class Reference():
                                         + ' obar'),
                     'interp': 'NEAREST, BILIN',
                     'vx_mask_list' : [
-                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
+                        'NHEM', 'SHEM', 'TROPICS', 'G003', 'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
                         'Appalachia', 'CPlains', 'DeepSouth', 'GreatBasin', 'GreatLakes', 
                         'Mezquital', 'MidAtlantic', 'NorthAtlantic', 'NPlains', 'NRockies',
                         'PacificNW', 'PacificSW', 'Prairie', 'Southeast', 'Southwest', 'SPlains', 'SRockies',
@@ -1568,7 +1580,7 @@ class Reference():
                                         + ' faratio, sratio'),
                     'interp': 'NEAREST, BILIN',
                     'vx_mask_list' : [
-                        'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
+                        'NHEM', 'SHEM', 'TROPICS', 'G003', 'CONUS', 'CONUS_East', 'CONUS_West', 'CONUS_Central', 'CONUS_South',
                         'Appalachia', 'CPlains', 'DeepSouth', 'GreatBasin', 'GreatLakes', 
                         'Mezquital', 'MidAtlantic', 'NorthAtlantic', 'NPlains', 'NRockies',
                         'PacificNW', 'PacificSW', 'Prairie', 'Southeast', 'Southwest', 'SPlains', 'SRockies',
