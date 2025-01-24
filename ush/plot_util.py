@@ -2740,7 +2740,7 @@ def get_rolling_mean(y_vals_metric, window_size):
     """
     # Compute rolling mean
     y_vals_rolling = pd.Series(y_vals_metric).rolling(
-        int(window_size), center=True, min_periods=1
+        int(window_size), center=True, min_periods=int(window_size)
     ).mean()
     
     # Get first and last non-NaN indices
