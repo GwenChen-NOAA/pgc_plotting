@@ -185,29 +185,29 @@ class Presets():
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
                 ).strftime('%Y%m%d')
             },
-            'last10years': {
+            'last9years': {
                 'valid_beg': (
-                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=10)
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=9)
                 ).strftime('%Y%m%d'),
                 'valid_end': (
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
                 ).strftime('%Y%m%d'),
                 'init_beg': (
-                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=10)
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=9)
                     ).strftime('%Y%m%d'),
                 'init_end': (
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
                 ).strftime('%Y%m%d')
             },
-            'last7years': {
+            'last8years': {
                 'valid_beg': (
-                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=7)
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=8)
                 ).strftime('%Y%m%d'),
                 'valid_end': (
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
                 ).strftime('%Y%m%d'),
                 'init_beg': (
-                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=7)
+                    datetime.strptime(os.environ['VDATE'], '%Y%m%d')-relativedelta(years=8)
                     ).strftime('%Y%m%d'),
                 'init_end': (
                     datetime.strptime(os.environ['VDATE'], '%Y%m%d')
@@ -227,9 +227,9 @@ class Presets():
             },
             '2000s': {
                 'valid_beg': '20000101',
-                'valid_end': '20101231',
+                'valid_end': '20091231',
                 'init_beg': '20000101',
-                'init_end': '20101231'
+                'init_end': '20091231'
             },
         }
             
